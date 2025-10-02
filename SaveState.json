@@ -1,0 +1,11 @@
+{
+    "player_hp": 72,
+    "player_mp": 60,
+    "enemy_hp": 30,
+    "level": 2,
+    "weapon": {
+        "name": "Staff",
+        "m_damage": 15,
+        "magic_dmg": 30
+    }
+}
