@@ -1,11 +1,20 @@
 {
-    "player_hp": 72,
-    "player_mp": 60,
-    "enemy_hp": 30,
-    "level": 2,
+    "player_hp": 100,
+    "player_mp": 100,
+    "level": 0,
     "weapon": {
-        "name": "Staff",
-        "m_damage": 15,
-        "magic_dmg": 30
-    }
+        "name": "Axe",
+        "m_damage": 50,
+        "magic_dmg": 0
+    },
+    "armor": {
+        "name": "Tunic",
+        "defense": 0.1
+    },
+    "enemies": [
+        {
+            "name": "Goblin",
+            "hp": 50
+        }
+    ]
 }

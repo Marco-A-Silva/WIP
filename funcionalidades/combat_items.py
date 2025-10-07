@@ -1,10 +1,14 @@
 
 class Weapon:
-    def __init__(self, name, m_damage):
+    def __init__(self, name, m_damage, owner = None):
         self.name = name
         self.m_damage = m_damage
+        self.owner = owner
 
-    def melee_attack(self, attacker, target):
+    def setOwner(self, owner):
+        self.owner = owner
+
+    def melee_attack(self, target):
         target.take_damage(self.m_damage)
 
 class MagicWeapon(Weapon):
@@ -12,9 +16,9 @@ class MagicWeapon(Weapon):
         super().__init__(name, m_damage)
         self.magic_dmg = magic_dmg
 
-    def cast_spell(self, caster, target):
+    def cast_spell(self, target):
         target.take_damage(self.magic_dmg)
-        caster.mp -= 10 
+        self.owner.mp -= 10
 
 
 class Item:
@@ -22,6 +26,7 @@ class Item:
         self.name = name
         self.uses = uses
 
+# Defense is a % reduction of damage taken
 class Armor:
     def __init__(self, name, defense):
         self.name = name
