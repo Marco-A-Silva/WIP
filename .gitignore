@@ -1,0 +1,9 @@
+# Ignorar carpetas de cache de Python
+**/__pycache__/
+
+# Ignorar archivos .pyc
+*.pyc
+
+# Ignorar archivos generados por tu IDE/editor
+.vscode/
+.idea/
