@@ -1,0 +1,24 @@
+import pygame
+
+def eventHandling(display, level, my_turn, isLastWeaponShopLevel, isLastShopLevel, menu_list):
+    last_weapon_menu_level = None
+    last_shop_menu_level = None
+    menu_is_open = any(menu_list.values())
+
+    # Mensajes de turno
+    if my_turn:
+        display[0].blit(display[1].render("Mi Turno", True, (255, 255, 255)), (10, 10))
+    else:
+        display[0].blit(display[1].render("Turno Enemigo", True, (255, 255, 255)), (10, 10))
+
+    # Abrir menú solo si no está abierto y no se guardó el nivel
+
+    if not menu_list["Weapon Shop"] and level % 3 == 0 and not isLastWeaponShopLevel:
+        menu_list["Weapon Shop"] = True
+        last_weapon_menu_level = level
+        
+    if not menu_list["Shop"] and level % 5 == 0 and level % 2 == 0 and not isLastShopLevel:
+        menu_list["Shop"] = True
+        last_shop_menu_level = level
+
+    return menu_list["Weapon Shop"], menu_list["Shop"], last_weapon_menu_level, last_shop_menu_level, menu_is_open

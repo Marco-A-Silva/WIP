@@ -1,6 +1,6 @@
 
 class Weapon:
-    def __init__(self, name, m_damage, owner = None):
+    def __init__(self, name: str, m_damage: int, owner = None):
         self.name = name
         self.m_damage = m_damage
         self.owner = owner
