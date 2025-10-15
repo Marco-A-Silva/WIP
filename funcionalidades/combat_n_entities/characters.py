@@ -1,7 +1,18 @@
 from funcionalidades.combat_n_entities.combat_items import MagicWeapon, Weapon, Item, Armor
 
 fists = Weapon("Fists", 50)
-tunic = Armor("Tunic", 0.1)
+tunic = Armor("Tunic", 0.2)
+
+def modifyAttrs(obj, changes: dict):
+    
+    for attr, val in changes.items():
+        if hasattr(obj, attr):
+            # Si el valor es callable (función), lo ejecuta con el valor actual
+            if callable(val):
+                setattr(obj, attr, val(getattr(obj, attr)))
+            else:
+                setattr(obj, attr, val)
+                
 
 class Player:
 
@@ -39,8 +50,16 @@ class Player:
     def addItem(self, item : Item):
         self.items.append(item)
 
-    def take_damage(self, amount):
-        self.hp -= amount
+    def useItem(self,index):
+        self.items[index].function()
+        self.items[index].uses -= 1
+        if(self.items[index].uses == 0):
+            del self.items[index]
+
+    def take_damage(self, amount, ignore):
+        if not ignore:
+            self.hp -= amount - round(amount*self.armor.defense)
+        else: self.hp -= amount
         if self.hp < 0:
             self.hp = 0
 
@@ -50,17 +69,42 @@ class Player:
     def gold_remove(self, amount):
         self.gd -= amount
 
+
 class Mage(Player):
     def __init__(self, hp: int, mp: int, weapon: Weapon = None):
         super().__init__(hp, mp, weapon)
+        
 
 class Enemy:
-    def __init__(self, name: str, hp: int, reward: int = 10):
+    def __init__(self, name: str, hp: int, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills = None):
         self.hp = hp
+        self.base_hp = hp
+        self.dmg = dmg
+        self.dmg_red = dmg_red
         self.name = name
         self.reward = reward
+        self.skills = skills
 
-    def take_damage(self, amount):
-        self.hp -= amount
+    def attack(self, target, ignore):
+        target.take_damage(self.dmg, ignore)
+
+    def take_damage(self, amount, ignore):
+        if not ignore:
+            self.hp = self.hp - round(amount - amount*self.dmg_red)
+        else: self.hp -= amount
         if self.hp < 0:
             self.hp = 0
+
+    # Reserved for swarm-like enemies
+    def call_reinforcements(self, amount: int, enemy_list):
+        goblin_count = sum(1 for enemy in enemy_list if enemy.name == "Goblin")
+        if(goblin_count <= 3):
+            index = next((i for i, e in enumerate(enemy_list) if e.name == "Goblin"), -1)
+            if index == -1:
+                return  # no hay Goblin
+
+            for i in range(amount):
+                reinforcement = Enemy(self.name, self.base_hp - 50, self.dmg, self.dmg_red, skills=self.skills)
+                enemy_list.insert(index + 1 + i, reinforcement)
+        else:
+            self.dmg += 5

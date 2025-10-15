@@ -22,3 +22,15 @@ def eventHandling(display, level, my_turn, isLastWeaponShopLevel, isLastShopLeve
         last_shop_menu_level = level
 
     return menu_list["Weapon Shop"], menu_list["Shop"], last_weapon_menu_level, last_shop_menu_level, menu_is_open
+
+#def pickNewEnemies(count, enemy_list):
+
+def modify_attrs(obj, changes: dict):
+
+    for attr, val in changes.items():
+        if hasattr(obj, attr):
+            # Si el valor es callable (función), lo ejecuta con el valor actual
+            if callable(val):
+                setattr(obj, attr, val(getattr(obj, attr)))
+            else:
+                setattr(obj, attr, val)

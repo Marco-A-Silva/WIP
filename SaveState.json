@@ -1,7 +1,7 @@
 {
     "player_hp": 100,
     "player_mp": 100,
-    "level": 9,
+    "level": 10,
     "weapon": {
         "name": "Axe",
         "m_damage": 50,
@@ -14,15 +14,11 @@
     "enemies": [
         {
             "name": "Goblin",
-            "hp": 100
-        },
-        {
-            "name": "Wraith",
-            "hp": 50
-        },
-        {
-            "name": "Orc",
-            "hp": 150
+            "hp": 100,
+            "skills": [
+                "Goblin Gang",
+                "Humiliation"
+            ]
         }
     ]
 }

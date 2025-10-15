@@ -8,8 +8,8 @@ class Weapon:
     def setOwner(self, owner):
         self.owner = owner
 
-    def melee_attack(self, target):
-        target.take_damage(self.m_damage)
+    def melee_attack(self, target,ignore):
+        target.take_damage(self.m_damage, ignore)
 
 class MagicWeapon(Weapon):
     def __init__(self, name, m_damage, magic_dmg):
@@ -22,8 +22,9 @@ class MagicWeapon(Weapon):
 
 
 class Item:
-    def __init__(self, name, uses):
+    def __init__(self, name, function , uses):
         self.name = name
+        self.function = function
         self.uses = uses
 
 # Defense is a % reduction of damage taken

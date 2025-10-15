@@ -11,8 +11,13 @@ def drawScreen(display, main_player, enemies, level, isLastWeaponShopLevel, enem
     display[0].blit(texto, (700, 120))
     texto = display[1].render("Items:", True, (0,255,255))
     display[0].blit(texto, (150,500))
+    texto = display[1].render("Equipped Weapon:", True, (255,0,0))
+    display[0].blit(texto, (700,500))
+    texto = display[1].render(main_player.weapon.name + " " + str(main_player.weapon.m_damage) + " " + str(getattr(main_player.weapon, "magic_dmg", 0)), True, (255,255,255))
+    display[0].blit(texto, (700,540))
+    
     for i, item in enumerate(main_player.items):
-        texto = display[1].render(item.name, True, (255,255,255))
+        texto = display[1].render(item.name + " " + str(item.uses), True, (255,255,255))
         display[0].blit(texto, (150, 540 + 40*i))
 
     if not enemies_list:
@@ -22,7 +27,7 @@ def drawScreen(display, main_player, enemies, level, isLastWeaponShopLevel, enem
     for i, en in enumerate(enemies_list):
         texto2 = display[1].render("Enemy name: " + en.name + " Enemy hp: " + str(en.hp), True, display[2])
         display[0].blit(texto2, (150, 160 + i * 40))
-        enemies_list_serialized = [{"name": e.name, "hp": e.hp} for e in enemies_list]
+        enemies_list_serialized = [{"name": e.name, "hp": e.hp, "skills": list(e.skills.keys())} for e in enemies_list]
         enemies_list_is_serialized = True
 
-    return enemies_list, enemies_list_serialized,enemies_list_is_serialized
+    return enemies_list, enemies_list_serialized, enemies_list_is_serialized

@@ -2,7 +2,10 @@ import pygame
 import json
 from random import randint
 
-def menuControl(events, weaponry, menu_list, options, selected_id, shop_items, main_player, enemies_list_serialized, level, isLastWeaponShopLevel, isLastShopLevel, running):
+def menuControl(events, weaponry, menu_list, options, selected_id, main_player, enemies_list_serialized, level, isLastWeaponShopLevel, isLastShopLevel, save_path, running):
+    
+    shop_items = options[2]
+
     for event in events:
         if event.type == pygame.QUIT:
                 running = False
@@ -28,7 +31,7 @@ def menuControl(events, weaponry, menu_list, options, selected_id, shop_items, m
                                         menu_list["Pause"] = False
                                         selected_id = 0
                                     elif selected_id == 1:  # Quit to Desktop
-                                        with open("SaveState.json", "w") as w:
+                                        with open(save_path, "w") as w:
                                             json.dump({
                                                 "player_hp": main_player.hp,
                                                 "player_mp": main_player.mp,
