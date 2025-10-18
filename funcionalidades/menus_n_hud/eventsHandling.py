@@ -3,6 +3,7 @@ import pygame
 def eventHandling(display, level, my_turn, isLastWeaponShopLevel, isLastShopLevel, menu_list):
     last_weapon_menu_level = None
     last_shop_menu_level = None
+    isBossLevel = False    
     menu_is_open = any(menu_list.values())
 
     # Mensajes de turno
@@ -13,15 +14,18 @@ def eventHandling(display, level, my_turn, isLastWeaponShopLevel, isLastShopLeve
 
     # Abrir menú solo si no está abierto y no se guardó el nivel
 
-    if not menu_list["Weapon Shop"] and level % 3 == 0 and not isLastWeaponShopLevel:
-        menu_list["Weapon Shop"] = True
+    if not menu_list["Weapons"] and level % 5 == 0 and level % 10 != 0 and not isLastWeaponShopLevel:
+        menu_list["Weapons"] = True
         last_weapon_menu_level = level
         
     if not menu_list["Shop"] and level % 5 == 0 and level % 2 == 0 and not isLastShopLevel:
         menu_list["Shop"] = True
         last_shop_menu_level = level
 
-    return menu_list["Weapon Shop"], menu_list["Shop"], last_weapon_menu_level, last_shop_menu_level, menu_is_open
+    if level % 20 == 0 and level != 0:
+        isBossLevel = True
+
+    return menu_list["Weapons"], menu_list["Shop"], last_weapon_menu_level, last_shop_menu_level, menu_is_open, isBossLevel
 
 #def pickNewEnemies(count, enemy_list):
 

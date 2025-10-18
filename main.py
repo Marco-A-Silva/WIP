@@ -3,7 +3,8 @@ from funcionalidades import Player, Enemy, Item, Weapon, MagicWeapon, eventHandl
 
 
 pygame.init()
-screen = pygame.display.set_mode((1000, 1000))
+display_info = pygame.display.Info()
+screen = pygame.display.set_mode((display_info.current_w - 100, display_info.current_h - 50))
 colore = (255, 0, 255)
 font = pygame.font.SysFont("Arial", 30)
 display = [screen, font, colore]
@@ -17,25 +18,31 @@ shop_items = [[Item("Health Potion",lambda: modifyAttrs(main_player, {"hp": lamb
               ]
 
 weaponry = [Weapon("Sword", 30), MagicWeapon("Staff", 8, 30), Weapon("Axe", 50)]
-all_skills = {"Goblin Gang": lambda self: self.call_reinforcements(2,enemies_list), "Humiliation": lambda self: modifyAttrs(self, {"dmg_red": lambda x: x+0.2})   ,
-              "Shroud": lambda self: (modifyAttrs(self, {"dmg_red": 1}), modifyAttrs(self, {"hp" : lambda x: x+20})), "Intangable Attack": lambda self: 10, #ignore armor, to be implementedm
+enemy_skills = {"Goblin Gang": lambda self: self.call_reinforcements(2,enemies_list), 
+              "Humiliation": lambda self: modifyAttrs(self, {"dmg_red": lambda x: x+0.02}),
+              "Shroud": lambda self: (modifyAttrs(self, {"dmg_red": 1}), modifyAttrs(self, {"hp" : lambda x: x+20})), 
+              "Intangable Attack": lambda self: 10, #ignore armor, to be implementedm
               "Berserk": lambda self: (modifyAttrs(self, {"dmg_red": lambda x: x+0.4}),modifyAttrs(self, {"dmg": lambda x: x+20})),
-              "Taunt": lambda self: (modifyAttrs(main_player.armor, {"defense": lambda x: x-0.4}),modifyAttrs(main_player.weapon, {"m_damage": lambda x: x + 10,"magic_dmg": lambda x: x - 20}))
+              "Taunt": lambda self: (modifyAttrs(main_player.armor, {"defense": lambda x: x-0.4}),modifyAttrs(main_player.weapon, {"m_damage": lambda x: x + 10,"magic_dmg": lambda x: x - 20})),
+              "Leech Life": lambda self: (modifyAttrs(self.hp, {lambda x: x+10}), modifyAttrs(main_player.hp, {lambda x: x-10}))
               }
 
 enemy_count = 0
-enemies = [Enemy("Goblin", 100, skills= {"Goblin Gang": all_skills["Goblin Gang"],"Humiliation": all_skills["Humiliation"]}),
-           Enemy("Wraith", 50, skills={"Shroud": all_skills["Shroud"], "Intangable Attack": all_skills["Intangable Attack"]}), 
-           Enemy("Orc", 150, skills={"Berserk": all_skills["Berserk"], "Taunt": all_skills["Taunt"]})
+enemies = [Enemy("Goblin", 100, skills= {"Goblin Gang": enemy_skills["Goblin Gang"],"Humiliation": enemy_skills["Humiliation"]}),
+           Enemy("Wraith", 50, skills={"Shroud": enemy_skills["Shroud"], "Intangable Attack": enemy_skills["Intangable Attack"]}), 
+           Enemy("Orc", 150, skills={"Berserk": enemy_skills["Berserk"], "Taunt": enemy_skills["Taunt"]})
            ]
 
 enemies_list = []
 enemies_list_serialized = None
 enemies_list_is_serialized = False
-bosses = []
+isBossLevel = False
+bosses = [Enemy("High Orc", 300, skills={"Berkerk": enemy_skills["Berserk"], "Taunt": enemy_skills["Taunt"]}),
+          Enemy("Vampire Lord", 250, skills={"Leech Life": enemy_skills["Leech Life"]}),
+          ]
 
 menu_is_open = False
-menu_list = {"Pause" : False, "Weapon Shop" : False, "Shop" : False}
+menu_list = {"Pause" : False, "Weapons" : False, "Shop" : False}
 menu_options = [["Continue", "Quit to Desktop"],["Yes", "No"], shop_items]
 selected_id = 0
 
@@ -58,7 +65,7 @@ with open(save_path, "r") as f:
     main_player = Player(data["player_hp"], data["player_mp"], weapon=weapon_eq)
     level = data["level"]
     if data.get("enemies",[]):
-        enemies_list = [Enemy(e["name"], e["hp"], skills = {name: all_skills[name] for name in e["skills"] if name in all_skills}) for e in data["enemies"]]
+        enemies_list = [Enemy(e["name"], e["hp"], skills = {name: enemy_skills[name] for name in e["skills"] if name in enemy_skills}) for e in data["enemies"]]
 
 last_weapon_menu_level = data["level"]
 isLastWeaponShopLevel = True
@@ -68,7 +75,7 @@ isLastShopLevel = True
 while running:
     
     # Hud Setup
-    drawScreenArgs = [display, main_player, enemies, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized]
+    drawScreenArgs = [display, main_player, enemies, bosses, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized, isBossLevel]
     enemies_list, enemies_list_serialized, enemies_list_is_serialized = drawScreen(*drawScreenArgs)
 
     # Safely get events;
@@ -151,7 +158,7 @@ while running:
         
         for enemy in enemies_list:  
             if enemy.hp <= 0:
-                #enemies_list.remove(enemy)
+                enemies_list.remove(enemy)
                 main_player.gold_reward(enemy.reward)
                 level += 1
                 enemy.hp += enemy.base_hp + level * 5
@@ -162,14 +169,14 @@ while running:
         match menu_list:
             case {"Pause": True}:
                 drawPauseMenu(display, menu_options[0], selected_id)
-            case {"Weapon Shop": True}:
+            case {"Weapons": True}:
                 drawWeaponMenu(display, menu_options[1], selected_id)
             case {"Shop": True}:
                 drawShopMenu(display, shop_items, selected_id)
 
     # EventHandling 
     eventHandlingArgs = [display, level, MyTurn, isLastWeaponShopLevel, isLastShopLevel, menu_list]
-    menu_list["Weapon Shop"], menu_list["Shop"], last_weapon_menu_level, last_shop_menu_level, menu_is_open = eventHandling(*eventHandlingArgs)
+    menu_list["Weapons"], menu_list["Shop"], last_weapon_menu_level, last_shop_menu_level, menu_is_open, isBossLevel = eventHandling(*eventHandlingArgs)
 
     pygame.display.flip()
     clock.tick(30)

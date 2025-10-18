@@ -1,7 +1,7 @@
 {
     "player_hp": 100,
     "player_mp": 100,
-    "level": 10,
+    "level": 8,
     "weapon": {
         "name": "Axe",
         "m_damage": 50,

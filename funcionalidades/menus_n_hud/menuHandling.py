@@ -49,7 +49,7 @@ def menuControl(events, weaponry, menu_list, options, selected_id, main_player, 
                                             }, w, indent=4)
                                         running = False
                                         
-                    case {"Weapon Shop": True}:
+                    case {"Weapons": True}:
                         match event.key:
                             case pygame.K_UP | pygame.K_w:
                                 selected_id = (selected_id - 1) % len(options[1])
@@ -60,7 +60,7 @@ def menuControl(events, weaponry, menu_list, options, selected_id, main_player, 
                                     x = randint(0, 2)
                                     main_player.equip_weapon(weaponry[x])
 
-                                menu_list["Weapon Shop"] = False
+                                menu_list["Weapons"] = False
                                 isLastWeaponShopLevel = True
                                 selected_id = 0
                     

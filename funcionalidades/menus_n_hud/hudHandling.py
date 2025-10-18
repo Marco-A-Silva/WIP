@@ -1,7 +1,7 @@
 import pygame
 from random import randint
 
-def drawScreen(display, main_player, enemies, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized):
+def drawScreen(display, main_player, enemies, bosses, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized, isBossLevel):
     enemies_list_serialized = None
 
     display[0].fill("black")
@@ -23,6 +23,10 @@ def drawScreen(display, main_player, enemies, level, isLastWeaponShopLevel, enem
     if not enemies_list:
         enemy_count = randint(0, 3)
         enemies_list = [enemies[i] for i in range(enemy_count)]
+    
+    if isBossLevel:
+        boss_encounter = randint(0,1)
+        enemies_list.insert(0, bosses[boss_encounter])
 
     for i, en in enumerate(enemies_list):
         texto2 = display[1].render("Enemy name: " + en.name + " Enemy hp: " + str(en.hp), True, display[2])
