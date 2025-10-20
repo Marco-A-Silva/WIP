@@ -1,6 +1,6 @@
 import pygame, json, random, os, sys
-from funcionalidades import Player, Enemy, Item, Weapon, MagicWeapon, eventHandling, drawPauseMenu, drawWeaponMenu, drawShopMenu, menuControl, drawScreen, modifyAttrs
-
+from funcionalidades import Player, Enemy, Item, Weapon, MagicWeapon, OverTimeEffects 
+from funcionalidades import eventHandling, drawPauseMenu, drawWeaponMenu, drawShopMenu, menuControl, drawScreen, modifyAttrs, pickNewEnemies
 
 pygame.init()
 display_info = pygame.display.Info()
@@ -11,39 +11,35 @@ display = [screen, font, colore]
 
 clock = pygame.time.Clock()
 running = True
-MyTurn = True
-
-shop_items = [[Item("Health Potion",lambda: modifyAttrs(main_player, {"hp": lambda x: x+10}),2),15],
-              [Item("Mana Potion", lambda: modifyAttrs(main_player, {"mp": lambda x: x+10}),1),15]
-              ]
+myTurn = True
 
 weaponry = [Weapon("Sword", 30), MagicWeapon("Staff", 8, 30), Weapon("Axe", 50)]
-enemy_skills = {"Goblin Gang": lambda self: self.call_reinforcements(2,enemies_list), 
+enemySkills = {"Goblin Gang": lambda self: self.call_reinforcements(2,enemyList), 
               "Humiliation": lambda self: modifyAttrs(self, {"dmg_red": lambda x: x+0.02}),
-              "Shroud": lambda self: (modifyAttrs(self, {"dmg_red": 1}), modifyAttrs(self, {"hp" : lambda x: x+20})), 
-              "Intangable Attack": lambda self: 10, #ignore armor, to be implementedm
+              "Shroud": lambda self: self.addStatusEffect(OverTimeEffects(self,1,effects={"dmg_red": (1,True),"hp": (20,False)})),     
+              "Intangable Attack": lambda self: self.attack(main_player, True),
               "Berserk": lambda self: (modifyAttrs(self, {"dmg_red": lambda x: x+0.4}),modifyAttrs(self, {"dmg": lambda x: x+20})),
               "Taunt": lambda self: (modifyAttrs(main_player.armor, {"defense": lambda x: x-0.4}),modifyAttrs(main_player.weapon, {"m_damage": lambda x: x + 10,"magic_dmg": lambda x: x - 20})),
-              "Leech Life": lambda self: (modifyAttrs(self.hp, {lambda x: x+10}), modifyAttrs(main_player.hp, {lambda x: x-10}))
+              "Leech Life": lambda self: (modifyAttrs(self, {"hp": lambda x: x+10}), modifyAttrs(main_player, {"hp": lambda x: x-10}))
               }
 
-enemy_count = 0
-enemies = [Enemy("Goblin", 100, skills= {"Goblin Gang": enemy_skills["Goblin Gang"],"Humiliation": enemy_skills["Humiliation"]}),
-           Enemy("Wraith", 50, skills={"Shroud": enemy_skills["Shroud"], "Intangable Attack": enemy_skills["Intangable Attack"]}), 
-           Enemy("Orc", 150, skills={"Berserk": enemy_skills["Berserk"], "Taunt": enemy_skills["Taunt"]})
+enemyCount = 0
+enemies = [Enemy("Goblin", 100, skills= {"Goblin Gang": enemySkills["Goblin Gang"],"Humiliation": enemySkills["Humiliation"]}),
+           Enemy("Wraith", 50, skills={"Shroud": enemySkills["Shroud"], "Intangable Attack": enemySkills["Intangable Attack"]}), 
+           Enemy("Orc", 150, skills={"Berserk": enemySkills["Berserk"], "Taunt": enemySkills["Taunt"]})
            ]
 
-enemies_list = []
-enemies_list_serialized = None
-enemies_list_is_serialized = False
+enemyList = []
+enemyList_serialized = None
+enemyList_IsSerialized = False
 isBossLevel = False
-bosses = [Enemy("High Orc", 300, skills={"Berkerk": enemy_skills["Berserk"], "Taunt": enemy_skills["Taunt"]}),
-          Enemy("Vampire Lord", 250, skills={"Leech Life": enemy_skills["Leech Life"]}),
+isLastBossLevel = False
+bosses = [Enemy("High Orc", 300, skills={"Berkerk": enemySkills["Berserk"], "Taunt": enemySkills["Taunt"]}),
+          Enemy("Vampire Lord", 250, skills={"Leech Life": enemySkills["Leech Life"], "Shroud": enemySkills["Shroud"]}),
           ]
 
-menu_is_open = False
-menu_list = {"Pause" : False, "Weapons" : False, "Shop" : False}
-menu_options = [["Continue", "Quit to Desktop"],["Yes", "No"], shop_items]
+menuIsOpen = False
+menuList = {"Pause" : False, "Weapons" : False, "Shop" : False}
 selected_id = 0
 
 enemy_turn_start = None
@@ -65,18 +61,36 @@ with open(save_path, "r") as f:
     main_player = Player(data["player_hp"], data["player_mp"], weapon=weapon_eq)
     level = data["level"]
     if data.get("enemies",[]):
-        enemies_list = [Enemy(e["name"], e["hp"], skills = {name: enemy_skills[name] for name in e["skills"] if name in enemy_skills}) for e in data["enemies"]]
+        enemyList = [Enemy(e["name"], e["hp"], skills = {name: enemySkills[name] for name in e["skills"] if name in enemySkills}) for e in data["enemies"]]
 
 last_weapon_menu_level = data["level"]
+last_shop_menu_level = data["level"]
+lastMenuOpen = {"Shop": True, "Weapons": True}
 isLastWeaponShopLevel = True
 isLastShopLevel = True
+isFirstLevelLoaded = True
 
+shopItems = [[Item("Health Potion",lambda: modifyAttrs(main_player, {"hp": lambda x: x+10}),2),15],
+              [Item("Mana Potion", lambda: modifyAttrs(main_player, {"mp": lambda x: x+10}),2),15],
+              [Item("Invigorating Potion", lambda: main_player.addStatusEffect(OverTimeEffects(main_player.armor,2,effects={"dmg_red": (0.2, True)})), 2), 30],
+              [Item("Nothing Potion", lambda: None, 2),5],
+              [Item("Nothing Potion", lambda: None, 2),5]
+              ]
+
+menuOptions = [["Continue", "Quit to Desktop"],["Yes", "No"], shopItems]
+state = "menu"
 
 while running:
+
+    hud_states = {
+        "menu": ["[Shift] Attack", "[A] Magic Attack", "[Ctrl] Use Item"],
+        "items": [item.name + " - " + str(item.uses) for item in main_player.items] if main_player.items else ["[Empty] - No items found"],
+        "attack": [" " + str(index+1) + " - " + enemy.name for index, enemy in enumerate(enemyList)]
+    }
     
     # Hud Setup
-    drawScreenArgs = [display, main_player, enemies, bosses, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized, isBossLevel]
-    enemies_list, enemies_list_serialized, enemies_list_is_serialized = drawScreen(*drawScreenArgs)
+    drawScreenArgs = [display, hud_states, state, myTurn, main_player, enemies, bosses, level, isLastWeaponShopLevel, enemyList, enemyList_IsSerialized, isBossLevel, isLastBossLevel]
+    enemyList, enemyList_serialized, enemyList_IsSerialized, isLastBossLevel = drawScreen(*drawScreenArgs)
 
     # Safely get events;
     try:
@@ -87,96 +101,111 @@ while running:
         events = []
 
     # Menu Control
-    menuControlArgs = [events, weaponry, menu_list, menu_options, selected_id, main_player, enemies_list_serialized, level, isLastWeaponShopLevel, isLastShopLevel, save_path, running]
-    selected_id, running, isLastWeaponShopLevel, isLastShopLevel = menuControl(*menuControlArgs)
+    menuControlArgs = [myTurn, events, state, weaponry, menuList, menuOptions, selected_id, main_player, enemyList_serialized, level, isLastWeaponShopLevel, isLastShopLevel, save_path, running]
+    selected_id, running, isLastWeaponShopLevel, isLastShopLevel, state = menuControl(*menuControlArgs)
 
     # Game input only when menu is not open
-    if not menu_is_open: 
+    if not menuIsOpen: 
 
         keys = pygame.key.get_pressed()
         inputs = {"shift": keys[pygame.K_LSHIFT],"a": keys[pygame.K_a], "ctrl": keys[pygame.K_LCTRL]}
-        for i, enemey in enumerate(enemies_list, start=1):
+        for i, enemey in enumerate(enemyList, start=1):
             key_attr = getattr(pygame, f"K_{i}") 
             inputs[str(i)] = keys[key_attr]
 
         # Turn-based logic
-        if MyTurn:
+        if myTurn:
             match inputs:
                 case {"shift": True}:
                    
-                    enemy_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(enemies_list))}
+                    enemy_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(enemyList))}
 
                     for key, pressed in enemy_keys.items():
                         if pressed:
                             enemy_idx = int(key) - 1
-                            main_player.weapon.melee_attack(enemies_list[enemy_idx],False)
-                            MyTurn = False
+                            main_player.weapon.melee_attack(enemyList[enemy_idx],False)
+                            myTurn = False
                             break
 
                 case {"a": True}:
                     if getattr(main_player.weapon, "magic_dmg", 0) != 0 and main_player.mp >= 10:
                         
-                        enemy_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(enemies_list))}
+                        enemy_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(enemyList))}
 
                         for key, pressed in enemy_keys.items():
                             if pressed:
                                 enemy_idx = int(key) - 1
-                                main_player.weapon.cast_spell(enemies_list[enemy_idx])
-                                MyTurn = False
+                                main_player.weapon.cast_spell(enemyList[enemy_idx])
+                                myTurn = False
                                 break
                 
                 case {"ctrl": True}:
                     item_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(main_player.items))}
-
                     for key, pressed in item_keys.items():
                         if pressed:
                             key_id = int(key) - 1
                             main_player.useItem(key_id)
-                            MyTurn = False
+                            myTurn = False
                             break
+            if not myTurn:
+                state = "menu"
+                for e in enemyList:
+                    for effect in e.stat_effs:
+                        effect.passTurn()
 
-        elif not MyTurn:
+        elif not myTurn:
             if enemy_turn_start is None:
                 enemy_turn_start = pygame.time.get_ticks()  # registramos cuándo empezó el turno enemigo
 
             # Si pasaron 1 segundo (1000 ms)
             if pygame.time.get_ticks() - enemy_turn_start > 1000:
-                for enemy in enemies_list:
-                    outcome = random.randint(0,3)
+                for enemy in enemyList:
+                    outcome = 3
                     if outcome == 3:
                         skill_names = list(enemy.skills.keys())
                         skill_name = random.choice(skill_names)
                         enemy.skills[skill_name](enemy)
                         print(f"{enemy.name} uses {skill_name}!")
                     else:
-                        enemy.attack(main_player, False)
-                        print(f"{enemy.name} attacks! {enemy.dmg} {main_player.armor.defense} {enemy.dmg - enemy.dmg*main_player.armor.defense} {enemy.dmg*main_player.armor.defense}")
+                        enemy.attack(main_player, False)    
+                        print(f"{enemy.name} attacks! {enemy.dmg} {main_player.armor.dmg_red} {enemy.dmg - enemy.dmg*main_player.armor.dmg_red} {enemy.dmg*main_player.armor.dmg_red}")
                     
                 print("-----------------------------")
-                MyTurn = True
+                myTurn = True
                 enemy_turn_start = None  # reiniciamos el temporizador
+
+                for effect in main_player.stat_effs:
+                    effect.passTurn()
         
-        for enemy in enemies_list:  
-            if enemy.hp <= 0:
-                enemies_list.remove(enemy)
-                main_player.gold_reward(enemy.reward)
+        if enemyList:
+            for enemy in enemyList:  
+                if enemy.hp <= 0:
+                    enemyList.remove(enemy)
+                    main_player.gold_reward(enemy.reward)
+                    
+                    break   
+        else:
+            if not isFirstLevelLoaded:
                 level += 1
-                enemy.hp += enemy.base_hp + level * 5
-                isLastWeaponShopLevel = last_weapon_menu_level == level
-                isLastShopLevel = last_shop_menu_level == level
-                break
+            enemyList = pickNewEnemies(random.randint(0,3),enemyList, enemies, bosses, level, isBossLevel, isLastBossLevel)
+            for enemy in enemyList: enemy.hp = enemy.base_hp + level
+            isLastWeaponShopLevel = last_weapon_menu_level == level
+            isLastShopLevel = last_shop_menu_level == level
+            isFirstLevelLoaded = False 
+        
+        
     else:
-        match menu_list:
+        match menuList:
             case {"Pause": True}:
-                drawPauseMenu(display, menu_options[0], selected_id)
+                drawPauseMenu(display, menuOptions[0], selected_id)
             case {"Weapons": True}:
-                drawWeaponMenu(display, menu_options[1], selected_id)
+                drawWeaponMenu(display, menuOptions[1], selected_id)
             case {"Shop": True}:
-                drawShopMenu(display, shop_items, selected_id)
+                drawShopMenu(display, shopItems, selected_id)
 
     # EventHandling 
-    eventHandlingArgs = [display, level, MyTurn, isLastWeaponShopLevel, isLastShopLevel, menu_list]
-    menu_list["Weapons"], menu_list["Shop"], last_weapon_menu_level, last_shop_menu_level, menu_is_open, isBossLevel = eventHandling(*eventHandlingArgs)
+    eventHandlingArgs = [display, level, myTurn, isLastWeaponShopLevel, isLastShopLevel, isLastBossLevel, menuList]
+    menuList["Weapons"], menuList["Shop"], last_weapon_menu_level, last_shop_menu_level, menuIsOpen, isBossLevel, isLastBossLevel = eventHandling(*eventHandlingArgs)
 
     pygame.display.flip()
     clock.tick(30)

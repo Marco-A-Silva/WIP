@@ -1,4 +1,15 @@
 
+
+def modifyAttrs(target, changes: dict):
+    
+    for attr, val in changes.items():
+        if hasattr(target, attr):
+            # Si el valor es callable (función), lo ejecuta con el valor actual
+            if callable(val):
+                setattr(target, attr, val(getattr(target, attr)))
+            else:
+                setattr(target, attr, val)
+
 class Weapon:
     def __init__(self, name: str, m_damage: int, owner = None):
         self.name = name
@@ -29,6 +40,29 @@ class Item:
 
 # Defense is a % reduction of damage taken
 class Armor:
-    def __init__(self, name, defense):
+    def __init__(self, name, dmg_red):
         self.name = name
-        self.defense = defense
+        self.dmg_red = dmg_red
+
+class OverTimeEffects:
+    def __init__(self, target, turns, effects):
+        """
+        effects: diccionario {atributo: diferencia}
+        Ejemplo: {"hp": +10, "armor": -5}
+        """
+        self.turns = turns
+        self.target = target
+        self.effects = effects
+
+        # Aplica todos los efectos al crear el objeto
+        modifyAttrs(target, {attr: (lambda diff=diff: (lambda x: x + diff))() for attr, (diff,isTemp) in effects.items()})
+
+    def undoOTE(self):
+        # Revierte todos los efectos
+        for attr, (diff, isTemp) in self.effects.items():
+            if isTemp:
+                modifyAttrs(self.target, {attr: (lambda diff=diff: (lambda x: x - diff))()})
+        
+    def passTurn(self):
+        self.turns -= 1
+        if self.turns == 0: self.undoOTE()

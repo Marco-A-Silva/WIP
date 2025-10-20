@@ -1,23 +1,29 @@
 {
-    "player_hp": 100,
+    "player_hp": 1000,
     "player_mp": 100,
-    "level": 8,
+    "level": 9,
     "weapon": {
         "name": "Axe",
-        "m_damage": 50,
+        "m_damage": 500,
         "magic_dmg": 0
     },
     "armor": {
         "name": "Tunic",
-        "defense": 0.1
+        "dmg_red": 0.2
     },
     "enemies": [
         {
-            "name": "Goblin",
-            "hp": 100,
+            "name": "Wraith",
+            "hp": 59,
             "skills": [
-                "Goblin Gang",
-                "Humiliation"
+                "Shroud"
+            ]
+        },
+        {
+            "name": "Wraith",
+            "hp": 59,
+            "skills": [
+                "Shroud"
             ]
         }
     ]

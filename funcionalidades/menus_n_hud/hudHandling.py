@@ -1,37 +1,42 @@
 import pygame
 from random import randint
 
-def drawScreen(display, main_player, enemies, bosses, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized, isBossLevel):
+def drawScreen(display, hud_states, state, my_turn, main_player, enemies, bosses, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized, isBossLevel, isLastBossLevel):
     enemies_list_serialized = None
+    NoBossInEnemyList = True
 
     display[0].fill("black")
-    texto = display[1].render("Player hp: " + str(main_player.hp) + " mp: " + str(main_player.mp) + " gold: " + str(main_player.gd), True, (255, 255, 255))
+    texto = display[1].render("Player hp: " + str(main_player.hp) + " dmg_red: " + str(main_player.armor.dmg_red) + " gold: " + str(main_player.gd), True, (255, 255, 255))
     display[0].blit(texto, (150, 120))
     texto = display[1].render("Level: " + str(level) + " : " + str(isLastWeaponShopLevel), True, (255, 255, 255))
     display[0].blit(texto, (700, 120))
-    texto = display[1].render("Items:", True, (0,255,255))
-    display[0].blit(texto, (150,500))
     texto = display[1].render("Equipped Weapon:", True, (255,0,0))
-    display[0].blit(texto, (700,500))
+    display[0].blit(texto, (700,300))
     texto = display[1].render(main_player.weapon.name + " " + str(main_player.weapon.m_damage) + " " + str(getattr(main_player.weapon, "magic_dmg", 0)), True, (255,255,255))
-    display[0].blit(texto, (700,540))
-    
-    for i, item in enumerate(main_player.items):
-        texto = display[1].render(item.name + " " + str(item.uses), True, (255,255,255))
-        display[0].blit(texto, (150, 540 + 40*i))
+    display[0].blit(texto, (700,340))
 
-    if not enemies_list:
-        enemy_count = randint(0, 3)
-        enemies_list = [enemies[i] for i in range(enemy_count)]
-    
-    if isBossLevel:
-        boss_encounter = randint(0,1)
-        enemies_list.insert(0, bosses[boss_encounter])
+    if my_turn:
+        display[0].blit(display[1].render("Mi Turno", True, (255, 255, 255)), (10, 10))
+    else:
+        display[0].blit(display[1].render("Turno Enemigo", True, (255, 255, 255)), (10, 10))
+
+    pygame.draw.rect(display[0], (50,50,50), (20, display[0].get_height() - 150, display[0].get_width() - 40, 130), border_radius= 10)
+    pygame.draw.rect(display[0], (200,200,255), (20, display[0].get_height() - 150, display[0].get_width() - 40, 130), 2, border_radius= 10)
+
+    x_offset = display[0].get_width() - 1230
+    for line in hud_states[state]:
+        text_surface = display[1].render(line, True, (255, 255, 255))
+        display[0].blit(text_surface, (x_offset, display[0].get_height() - 130))
+        width, height = display[1].size(line)
+        x_offset += width + 20
 
     for i, en in enumerate(enemies_list):
-        texto2 = display[1].render("Enemy name: " + en.name + " Enemy hp: " + str(en.hp), True, display[2])
+        texto2 = display[1].render("Enemy name: " + en.name + " Enemy hp: " + str(en.hp) + " " + str(en.dmg_red), True, display[2])
         display[0].blit(texto2, (150, 160 + i * 40))
+        if en.stat_effs: 
+            texto2 = display[1].render("Status " + str(en.stat_effs[0].turns), True, display[2])
+            display[0].blit(texto2, (800, 160 + i * 40))
         enemies_list_serialized = [{"name": e.name, "hp": e.hp, "skills": list(e.skills.keys())} for e in enemies_list]
         enemies_list_is_serialized = True
 
-    return enemies_list, enemies_list_serialized, enemies_list_is_serialized
+    return enemies_list, enemies_list_serialized, enemies_list_is_serialized, isLastBossLevel

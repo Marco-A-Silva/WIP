@@ -1,16 +1,10 @@
-import pygame
+import pygame, random
 
-def eventHandling(display, level, my_turn, isLastWeaponShopLevel, isLastShopLevel, menu_list):
+def eventHandling(display, level, my_turn, isLastWeaponShopLevel, isLastShopLevel, isLastBossLevel, menu_list):
     last_weapon_menu_level = None
     last_shop_menu_level = None
     isBossLevel = False    
     menu_is_open = any(menu_list.values())
-
-    # Mensajes de turno
-    if my_turn:
-        display[0].blit(display[1].render("Mi Turno", True, (255, 255, 255)), (10, 10))
-    else:
-        display[0].blit(display[1].render("Turno Enemigo", True, (255, 255, 255)), (10, 10))
 
     # Abrir menú solo si no está abierto y no se guardó el nivel
 
@@ -22,19 +16,19 @@ def eventHandling(display, level, my_turn, isLastWeaponShopLevel, isLastShopLeve
         menu_list["Shop"] = True
         last_shop_menu_level = level
 
-    if level % 20 == 0 and level != 0:
+    if level % 20 == 0 and level != 0 and not isLastBossLevel:
         isBossLevel = True
 
-    return menu_list["Weapons"], menu_list["Shop"], last_weapon_menu_level, last_shop_menu_level, menu_is_open, isBossLevel
+    return menu_list["Weapons"], menu_list["Shop"], last_weapon_menu_level, last_shop_menu_level, menu_is_open, isBossLevel, isLastBossLevel
 
-#def pickNewEnemies(count, enemy_list):
+def pickNewEnemies(count, enemyList, enemies, bosses, level, isBossLevel, isLastBossLevel):
 
-def modify_attrs(obj, changes: dict):
+    enemyList = random.choices(enemies, k= count)
+    for i, enemy in enumerate(enemyList):
+        enemy.hp = enemy.base_hp + level
 
-    for attr, val in changes.items():
-        if hasattr(obj, attr):
-            # Si el valor es callable (función), lo ejecuta con el valor actual
-            if callable(val):
-                setattr(obj, attr, val(getattr(obj, attr)))
-            else:
-                setattr(obj, attr, val)
+    if isBossLevel and not isLastBossLevel:
+        enemyList.insert(0,random.choice(bosses))
+        isLastBossLevel = True
+
+    return enemyList

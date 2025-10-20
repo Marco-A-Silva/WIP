@@ -2,31 +2,25 @@ from funcionalidades.combat_n_entities.combat_items import MagicWeapon, Weapon, 
 
 fists = Weapon("Fists", 50)
 tunic = Armor("Tunic", 0.2)
-
-def modifyAttrs(obj, changes: dict):
-    
-    for attr, val in changes.items():
-        if hasattr(obj, attr):
-            # Si el valor es callable (función), lo ejecuta con el valor actual
-            if callable(val):
-                setattr(obj, attr, val(getattr(obj, attr)))
-            else:
-                setattr(obj, attr, val)
                 
 
 class Player:
 
-    def __init__(self, hp: int, mp: int, gd: int = 0, weapon: Weapon = None, armor: Armor = None):
+    def __init__(self, hp: int, mp: int, gd: int = 0, weapon: Weapon = None, armor: Armor = None, stat_effs = []):
         self.hp = hp
         self.mp = mp
         self.gd = gd
         self.items = []
+        self.stat_effs = stat_effs
         self.weapon = weapon
         if self.weapon is None:
             self.equip_weapon(fists)
         self.armor = armor
         if self.armor is None:
             self.equip_armor(tunic)
+
+    def addStatusEffect(self, status):
+        self.stat_effs.append(status)
 
     def equip_weapon(self, weapon: Weapon):
         weapon.setOwner(self)
@@ -58,7 +52,7 @@ class Player:
 
     def take_damage(self, amount, ignore):
         if not ignore:
-            self.hp -= amount - round(amount*self.armor.defense)
+            self.hp -= amount - round(amount*self.armor.dmg_red)
         else: self.hp -= amount
         if self.hp < 0:
             self.hp = 0
@@ -76,7 +70,7 @@ class Mage(Player):
         
 
 class Enemy:
-    def __init__(self, name: str, hp: int, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills = None):
+    def __init__(self, name: str, hp: int, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills = None, stat_effs = []):
         self.hp = hp
         self.base_hp = hp
         self.dmg = dmg
@@ -84,13 +78,17 @@ class Enemy:
         self.name = name
         self.reward = reward
         self.skills = skills
+        self.stat_effs = stat_effs
+
+    def addStatusEffect(self, status):
+        self.stat_effs.append(status)
 
     def attack(self, target, ignore):
         target.take_damage(self.dmg, ignore)
 
     def take_damage(self, amount, ignore):
         if not ignore:
-            self.hp = self.hp - round(amount - amount*self.dmg_red)
+            self.hp = self.hp - round(amount - (amount * self.dmg_red))
         else: self.hp -= amount
         if self.hp < 0:
             self.hp = 0
