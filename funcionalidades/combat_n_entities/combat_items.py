@@ -1,4 +1,5 @@
-
+from .protocols import Equipable
+ 
 
 def modifyAttrs(target, changes: dict):
     
@@ -18,6 +19,9 @@ class Weapon:
 
     def setOwner(self, owner):
         self.owner = owner
+
+    def equip(self):
+        if self.owner: self.owner.weapon = self
 
     def melee_attack(self, target,ignore):
         target.take_damage(self.m_damage, ignore)
@@ -40,9 +44,16 @@ class Item:
 
 # Defense is a % reduction of damage taken
 class Armor:
-    def __init__(self, name, dmg_red):
+    def __init__(self, name, dmg_red, owner = None):
         self.name = name
         self.dmg_red = dmg_red
+        self.owner = owner
+
+    def setOwner(self, owner):
+        self.owner = owner
+
+    def equip(self):
+        if self.owner: self.owner.armor = self
 
 class OverTimeEffects:
     def __init__(self, target, turns, effects):
@@ -55,13 +66,13 @@ class OverTimeEffects:
         self.effects = effects
 
         # Aplica todos los efectos al crear el objeto
-        modifyAttrs(target, {attr: (lambda diff=diff: (lambda x: x + diff))() for attr, (diff,isTemp) in effects.items()})
+        modifyAttrs(target, {attr: (lambda d=diff: (lambda x: x + d))() for attr, (diff,isTemp) in effects.items()})
 
     def undoOTE(self):
         # Revierte todos los efectos
         for attr, (diff, isTemp) in self.effects.items():
             if isTemp:
-                modifyAttrs(self.target, {attr: (lambda diff=diff: (lambda x: x - diff))()})
+                modifyAttrs(self.target, {attr: (lambda d=diff: (lambda x: x - d))()})
         
     def passTurn(self):
         self.turns -= 1

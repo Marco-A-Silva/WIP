@@ -1,9 +1,8 @@
 import pygame
 from random import randint
 
-def drawScreen(display, hud_states, state, my_turn, main_player, enemies, bosses, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized, isBossLevel, isLastBossLevel):
+def drawScreen(display, hud_states, state, my_turn, main_player, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized):
     enemies_list_serialized = None
-    NoBossInEnemyList = True
 
     display[0].fill("black")
     texto = display[1].render("Player hp: " + str(main_player.hp) + " dmg_red: " + str(main_player.armor.dmg_red) + " gold: " + str(main_player.gd), True, (255, 255, 255))
@@ -33,10 +32,7 @@ def drawScreen(display, hud_states, state, my_turn, main_player, enemies, bosses
     for i, en in enumerate(enemies_list):
         texto2 = display[1].render("Enemy name: " + en.name + " Enemy hp: " + str(en.hp) + " " + str(en.dmg_red), True, display[2])
         display[0].blit(texto2, (150, 160 + i * 40))
-        if en.stat_effs: 
-            texto2 = display[1].render("Status " + str(en.stat_effs[0].turns), True, display[2])
-            display[0].blit(texto2, (800, 160 + i * 40))
         enemies_list_serialized = [{"name": e.name, "hp": e.hp, "skills": list(e.skills.keys())} for e in enemies_list]
         enemies_list_is_serialized = True
 
-    return enemies_list, enemies_list_serialized, enemies_list_is_serialized, isLastBossLevel
+    return enemies_list_serialized, enemies_list_is_serialized

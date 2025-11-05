@@ -1,8 +1,8 @@
 from funcionalidades.combat_n_entities.combat_items import MagicWeapon, Weapon, Item, Armor
+from .protocols import Equipable
 
 fists = Weapon("Fists", 50)
-tunic = Armor("Tunic", 0.2)
-                
+tunic = Armor("Tunic", 0.02)
 
 class Player:
 
@@ -14,32 +14,17 @@ class Player:
         self.stat_effs = stat_effs
         self.weapon = weapon
         if self.weapon is None:
-            self.equip_weapon(fists)
+            self.equip_armament(fists)
         self.armor = armor
         if self.armor is None:
-            self.equip_armor(tunic)
+            self.equip_armament(tunic)
 
     def addStatusEffect(self, status):
         self.stat_effs.append(status)
 
-    def equip_weapon(self, weapon: Weapon):
-        weapon.setOwner(self)
-        self.weapon = weapon
-
-    def equip_armor(self, armor: Armor):
-        self.armor = armor
-
-    def unequip_weapon(self):
-        if not self.weapon:
-            return
-        else:
-            self.weapon = None
-
-    def unequip_armor(self):
-        if not self.armor:
-            return
-        else:
-            self.armor = None
+    def equip_armament(self, armament: Equipable):
+        armament.setOwner(self)
+        armament.equip()
 
     def addItem(self, item : Item):
         self.items.append(item)
@@ -52,11 +37,11 @@ class Player:
 
     def take_damage(self, amount, ignore):
         if not ignore:
-            self.hp -= amount - round(amount*self.armor.dmg_red)
+            self.hp -= round(amount* (1 - self.armor.dmg_red))
         else: self.hp -= amount
         if self.hp < 0:
             self.hp = 0
-
+ 
     def gold_reward(self, amount):
         self.gd += amount
 
@@ -88,7 +73,7 @@ class Enemy:
 
     def take_damage(self, amount, ignore):
         if not ignore:
-            self.hp = self.hp - round(amount - (amount * self.dmg_red))
+            self.hp -= round(amount * (1 - self.dmg_red))
         else: self.hp -= amount
         if self.hp < 0:
             self.hp = 0

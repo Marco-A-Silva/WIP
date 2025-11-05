@@ -13,17 +13,11 @@
     },
     "enemies": [
         {
-            "name": "Wraith",
-            "hp": 59,
+            "name": "Orc",
+            "hp": 100,
             "skills": [
-                "Shroud"
-            ]
-        },
-        {
-            "name": "Wraith",
-            "hp": 59,
-            "skills": [
-                "Shroud"
+                "Berserk",
+                "Taunt"
             ]
         }
     ]

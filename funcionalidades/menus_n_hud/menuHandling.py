@@ -17,9 +17,10 @@ def menuControl(myTurn, events, state, weaponry, menu_list, options, selected_id
                     selected_id = 0
             
             elif myTurn or any(menu_list):
-                if state == "menu":
+                if state == "menu" and myTurn:
                     if event.key == pygame.K_LSHIFT: state = "attack"
                     elif event.key == pygame.K_LCTRL: state = "items"
+                    elif event.key == pygame.K_a and getattr(main_player.weapon, "magic_dmg", 0) is not 0: state = "attack"
                 elif event.key == pygame.K_b:
                     state = "menu"
 
@@ -63,8 +64,8 @@ def menuControl(myTurn, events, state, weaponry, menu_list, options, selected_id
                                 selected_id = (selected_id + 1) % len(options[1])
                             case pygame.K_RETURN | pygame.K_KP_ENTER:
                                 if selected_id == 0:  # "Yes"
-                                    x = randint(0, 2)
-                                    main_player.equip_weapon(weaponry[x])
+                                    x = randint(0, 2)   
+                                    main_player.equip_armament(weaponry[x])
 
                                 menu_list["Weapons"] = False
                                 isLastWeaponShopLevel = True

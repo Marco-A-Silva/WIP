@@ -1,5 +1,5 @@
 import pygame, json, random, os, sys
-from funcionalidades import Player, Enemy, Item, Weapon, MagicWeapon, OverTimeEffects 
+from funcionalidades import Player, Enemy, Item, Weapon, MagicWeapon, Armor, OverTimeEffects 
 from funcionalidades import eventHandling, drawPauseMenu, drawWeaponMenu, drawShopMenu, menuControl, drawScreen, modifyAttrs, pickNewEnemies
 
 pygame.init()
@@ -12,14 +12,19 @@ display = [screen, font, colore]
 clock = pygame.time.Clock()
 running = True
 myTurn = True
+shiftPressed = False
+aPressed = False
+ctrlPressed = False
 
-weaponry = [Weapon("Sword", 30), MagicWeapon("Staff", 8, 30), Weapon("Axe", 50)]
+blacksmith = [Weapon("Sword", 500), MagicWeapon("Staff", 500, 30), Weapon("Axe", 500), Armor("Chestplate",0.05)]
+
 enemySkills = {"Goblin Gang": lambda self: self.call_reinforcements(2,enemyList), 
-              "Humiliation": lambda self: modifyAttrs(self, {"dmg_red": lambda x: x+0.02}),
+              "Humiliation": lambda self: self.addStatusEffect(OverTimeEffects(self,2,effects={"dmg_red": (0.02, True)})),
               "Shroud": lambda self: self.addStatusEffect(OverTimeEffects(self,1,effects={"dmg_red": (1,True),"hp": (20,False)})),     
               "Intangable Attack": lambda self: self.attack(main_player, True),
-              "Berserk": lambda self: (modifyAttrs(self, {"dmg_red": lambda x: x+0.4}),modifyAttrs(self, {"dmg": lambda x: x+20})),
-              "Taunt": lambda self: (modifyAttrs(main_player.armor, {"defense": lambda x: x-0.4}),modifyAttrs(main_player.weapon, {"m_damage": lambda x: x + 10,"magic_dmg": lambda x: x - 20})),
+              "Berserk": lambda self: self.addStatusEffect(OverTimeEffects(self,2,effects={"dmg_red": (0.2, True), "dmg": (20, True)})),
+              "Taunt": lambda self: (main_player.addStatusEffect(OverTimeEffects(main_player.armor,3,effects={"defense": (-0.4, True)})), 
+                                    main_player.addStatusEffect(OverTimeEffects(main_player.weapon,2,effects={"m_damage": (10, True), "magic_dmg": (-20, True)}))),
               "Leech Life": lambda self: (modifyAttrs(self, {"hp": lambda x: x+10}), modifyAttrs(main_player, {"hp": lambda x: x-10}))
               }
 
@@ -89,8 +94,8 @@ while running:
     }
     
     # Hud Setup
-    drawScreenArgs = [display, hud_states, state, myTurn, main_player, enemies, bosses, level, isLastWeaponShopLevel, enemyList, enemyList_IsSerialized, isBossLevel, isLastBossLevel]
-    enemyList, enemyList_serialized, enemyList_IsSerialized, isLastBossLevel = drawScreen(*drawScreenArgs)
+    drawScreenArgs = [display, hud_states, state, myTurn, main_player, level, isLastWeaponShopLevel, enemyList, enemyList_IsSerialized]
+    enemyList_serialized, enemyList_IsSerialized = drawScreen(*drawScreenArgs)
 
     # Safely get events;
     try:
@@ -101,31 +106,45 @@ while running:
         events = []
 
     # Menu Control
-    menuControlArgs = [myTurn, events, state, weaponry, menuList, menuOptions, selected_id, main_player, enemyList_serialized, level, isLastWeaponShopLevel, isLastShopLevel, save_path, running]
+    menuControlArgs = [myTurn, events, state, blacksmith, menuList, menuOptions, selected_id, main_player, enemyList_serialized, level, isLastWeaponShopLevel, isLastShopLevel, save_path, running]
     selected_id, running, isLastWeaponShopLevel, isLastShopLevel, state = menuControl(*menuControlArgs)
 
     # Game input only when menu is not open
     if not menuIsOpen: 
 
         keys = pygame.key.get_pressed()
-        inputs = {"shift": keys[pygame.K_LSHIFT],"a": keys[pygame.K_a], "ctrl": keys[pygame.K_LCTRL]}
-        for i, enemey in enumerate(enemyList, start=1):
+        inputs = {"shift": [keys[pygame.K_LSHIFT], shiftPressed], # "nombre": [isActive, wasPressed]
+                  "a": [keys[pygame.K_a], aPressed], 
+                  "ctrl": [keys[pygame.K_LCTRL], ctrlPressed]}
+        for i, enemey in enumerate(enemyList, start=1): 
             key_attr = getattr(pygame, f"K_{i}") 
             inputs[str(i)] = keys[key_attr]
 
         # Turn-based logic
         if myTurn:
             match inputs:
-                case {"shift": True}:
-                   
+                case {"shift": [active, pressed]} if pressed or active:
+                    
                     enemy_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(enemyList))}
 
                     for key, pressed in enemy_keys.items():
                         if pressed:
+                            print([enemy.name for enemy in enemyList])
                             enemy_idx = int(key) - 1
-                            main_player.weapon.melee_attack(enemyList[enemy_idx],False)
+                            print("Before attack HPS:", [e.hp for e in enemyList])
+                            main_player.weapon.melee_attack(enemyList[enemy_idx], False)
+                            print("After attack HPS: ", [e.hp for e in enemyList])
+                            print([enemy.name for enemy in enemyList])
                             myTurn = False
+                            shiftPressed = False
+
                             break
+                    
+                    if keys[pygame.K_b]:
+                        shiftPressed = False
+                    
+                    if active: 
+                        shiftPressed = True
 
                 case {"a": True}:
                     if getattr(main_player.weapon, "magic_dmg", 0) != 0 and main_player.mp >= 10:
@@ -138,15 +157,29 @@ while running:
                                 main_player.weapon.cast_spell(enemyList[enemy_idx])
                                 myTurn = False
                                 break
+
+                        if keys[pygame.K_b]:
+                            aPressed = False
+                        
+                        if active: 
+                            aPressed = True
                 
-                case {"ctrl": True}:
+                case {"ctrl": [active, pressed]} if pressed or active:
                     item_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(main_player.items))}
                     for key, pressed in item_keys.items():
                         if pressed:
                             key_id = int(key) - 1
                             main_player.useItem(key_id)
                             myTurn = False
+                            ctrlPressed = False
                             break
+
+                    if keys[pygame.K_b]:
+                        ctrlPressed = False
+                    
+                    if active: 
+                        ctrlPressed = True
+
             if not myTurn:
                 state = "menu"
                 for e in enemyList:
@@ -160,7 +193,7 @@ while running:
             # Si pasaron 1 segundo (1000 ms)
             if pygame.time.get_ticks() - enemy_turn_start > 1000:
                 for enemy in enemyList:
-                    outcome = 3
+                    outcome = random.randint(0,3)
                     if outcome == 3:
                         skill_names = list(enemy.skills.keys())
                         skill_name = random.choice(skill_names)
@@ -185,8 +218,7 @@ while running:
                     
                     break   
         else:
-            if not isFirstLevelLoaded:
-                level += 1
+            level += 1
             enemyList = pickNewEnemies(random.randint(0,3),enemyList, enemies, bosses, level, isBossLevel, isLastBossLevel)
             for enemy in enemyList: enemy.hp = enemy.base_hp + level
             isLastWeaponShopLevel = last_weapon_menu_level == level
@@ -205,10 +237,10 @@ while running:
 
     # EventHandling 
     eventHandlingArgs = [display, level, myTurn, isLastWeaponShopLevel, isLastShopLevel, isLastBossLevel, menuList]
-    menuList["Weapons"], menuList["Shop"], last_weapon_menu_level, last_shop_menu_level, menuIsOpen, isBossLevel, isLastBossLevel = eventHandling(*eventHandlingArgs)
+    menuList, last_weapon_menu_level, last_shop_menu_level, menuIsOpen, isBossLevel, isLastBossLevel = eventHandling(*eventHandlingArgs)
 
     pygame.display.flip()
-    clock.tick(30)
+    clock.tick(120)
 
     if main_player.hp == 0:
         print("El juego ha terminado: el jugador perdió.")
