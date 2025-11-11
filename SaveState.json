@@ -1,24 +1,34 @@
 {
-    "player_hp": 1000,
-    "player_mp": 100,
     "level": 9,
+    "player_hp": 965,
+    "player_mp": 100,
+    "items": [
+        "Mana Potion"
+    ],
     "weapon": {
         "name": "Axe",
         "m_damage": 500,
-        "magic_dmg": 0
+        "magic_dmg": 100
     },
     "armor": {
         "name": "Tunic",
-        "dmg_red": 0.2
+        "dmg_red": 0.02
     },
     "enemies": [
         {
-            "name": "Orc",
-            "hp": 100,
-            "skills": [
-                "Berserk",
-                "Taunt"
-            ]
+            "name": "Fungal Titan",
+            "hp": 235,
+            "skills": []
+        },
+        {
+            "name": "Fungal Titan",
+            "hp": 235,
+            "skills": []
+        },
+        {
+            "name": "Guilded Automaton",
+            "hp": 210,
+            "skills": []
         }
     ]
 }

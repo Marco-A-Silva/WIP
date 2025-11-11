@@ -39,8 +39,21 @@ class MagicWeapon(Weapon):
 class Item:
     def __init__(self, name, function , uses):
         self.name = name
+        self.owner = None
         self.function = function
         self.uses = uses
+
+    def setOwner(self, owner):
+        self.owner = owner
+
+    def copy(self):
+        item = Item(self.name, self.function, self.uses)
+        item.setOwner(self.owner)
+        self.owner = None
+        return item
+
+    def equip(self):
+        self.owner.items.append(self.copy())
 
 # Defense is a % reduction of damage taken
 class Armor:
@@ -64,16 +77,27 @@ class OverTimeEffects:
         self.turns = turns
         self.target = target
         self.effects = effects
+        self.first = True
 
         # Aplica todos los efectos al crear el objeto
-        modifyAttrs(target, {attr: (lambda d=diff: (lambda x: x + d))() for attr, (diff,isTemp) in effects.items()})
+        modifyAttrs(target, {attr: (lambda d=diff: (lambda x: x + d))() for attr, (diff,_) in effects.items()})
 
-    def undoOTE(self):
+    def resolveOTE(self):
         # Revierte todos los efectos
-        for attr, (diff, isTemp) in self.effects.items():
-            if isTemp:
-                modifyAttrs(self.target, {attr: (lambda d=diff: (lambda x: x - d))()})
-        
+        for attr, (diff, nature) in self.effects.items():
+            match nature:
+                case 0: #One time effect
+                    pass
+                case 1: #Limited time effect
+                    if self.turns == 0: 
+                        modifyAttrs(self.target, {attr: (lambda d=diff: (lambda x: x - d))()})
+                case 2: #Every turn for X turns
+                    if not self.first:
+                        modifyAttrs(self.target, {attr: (lambda d=diff: (lambda x: x + d))()})
+                    
+                    self.first = False
+            
     def passTurn(self):
         self.turns -= 1
-        if self.turns == 0: self.undoOTE()
+        self.resolveOTE()
+        

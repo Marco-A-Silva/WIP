@@ -7,3 +7,4 @@
 # Ignorar archivos generados por tu IDE/editor
 .vscode/
 .idea/
+.venv/

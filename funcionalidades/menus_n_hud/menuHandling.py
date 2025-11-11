@@ -1,8 +1,9 @@
 import pygame
 import json
-from random import randint
+import copy
+from random import randint, choices
 
-def menuControl(myTurn, events, state, weaponry, menu_list, options, selected_id, main_player, enemies_list_serialized, level, isLastWeaponShopLevel, isLastShopLevel, save_path, running):
+def menuControl(myTurn, events, state, weaponry, bl_length, menu_list, options, selected_id, main_player, enemies_list_serialized, level, isLastWeaponShopLevel, isLastShopLevel, save_path, running):
     
     shop_items = options[2]
 
@@ -38,11 +39,13 @@ def menuControl(myTurn, events, state, weaponry, menu_list, options, selected_id
                                         menu_list["Pause"] = False
                                         selected_id = 0
                                     elif selected_id == 1:  # Quit to Desktop
+                                        item_names = [item.name for item in main_player.items]
                                         with open(save_path, "w") as w:
                                             json.dump({
+                                                "level": level,
                                                 "player_hp": main_player.hp,
                                                 "player_mp": main_player.mp,
-                                                "level": level,
+                                                "items": item_names,
                                                 "weapon": {
                                                     "name": main_player.weapon.name,
                                                     "m_damage": main_player.weapon.m_damage,
@@ -64,7 +67,7 @@ def menuControl(myTurn, events, state, weaponry, menu_list, options, selected_id
                                 selected_id = (selected_id + 1) % len(options[1])
                             case pygame.K_RETURN | pygame.K_KP_ENTER:
                                 if selected_id == 0:  # "Yes"
-                                    x = randint(0, 2)   
+                                    x = randint(0, bl_length-1)   
                                     main_player.equip_armament(weaponry[x])
 
                                 menu_list["Weapons"] = False
@@ -78,7 +81,7 @@ def menuControl(myTurn, events, state, weaponry, menu_list, options, selected_id
                             case pygame.K_DOWN | pygame.K_s:
                                 selected_id = (selected_id + 1) % len(options[2])
                             case pygame.K_RETURN | pygame.K_KP_ENTER:
-                                main_player.addItem(shop_items[selected_id][0])
+                                main_player.equip_armament(shop_items[selected_id][0])
                                 main_player.gold_remove(shop_items[selected_id][1])
                                 menu_list["Shop"] = False
                                 isLastShopLevel = True
@@ -142,7 +145,7 @@ def drawWeaponMenu(display, options, selected_idx_w):
         display[0].blit(opt_surf, opt_rect)
 
 
-def drawShopMenu(display, items, selected_idx_s):
+def drawShopMenu(display, items, random_items, selected_idx_s):
     overlay = pygame.Surface(display[0].get_size(), pygame.SRCALPHA)
     display[0].fill("black")
     overlay.fill((0, 0, 0, 160))
@@ -161,8 +164,11 @@ def drawShopMenu(display, items, selected_idx_s):
     merchant_rect = merchant_img.get_rect(center=(center_x, center_y))
     display[0].blit(merchant_img, merchant_rect)
     
+    if not random_items: 
+        random_items = choices(items, k=5)
+        items_chosen = True
 
-    for i, opt in enumerate(items):
+    for i, opt in enumerate(random_items):
         # opt[0] es el item, opt[1] es el precio
         color_text = (255, 255, 100) if i == selected_idx_s else (255, 255, 255)
         color_bg = (50, 50, 50) if i == selected_idx_s else (30, 30, 30)
@@ -200,3 +206,4 @@ def drawShopMenu(display, items, selected_idx_s):
         text_pos = (bg_rect.x + padding, bg_rect.y + padding) 
         display[0].blit(opt_surf, text_pos)
 
+    return random_items

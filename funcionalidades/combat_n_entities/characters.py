@@ -10,7 +10,6 @@ class Player:
         self.hp = hp
         self.mp = mp
         self.gd = gd
-        self.items = []
         self.stat_effs = stat_effs
         self.weapon = weapon
         if self.weapon is None:
@@ -18,6 +17,7 @@ class Player:
         self.armor = armor
         if self.armor is None:
             self.equip_armament(tunic)
+        self.items = []
 
     def addStatusEffect(self, status):
         self.stat_effs.append(status)
@@ -26,11 +26,8 @@ class Player:
         armament.setOwner(self)
         armament.equip()
 
-    def addItem(self, item : Item):
-        self.items.append(item)
-
     def useItem(self,index):
-        self.items[index].function()
+        self.items[index].function(self.items[index])
         self.items[index].uses -= 1
         if(self.items[index].uses == 0):
             del self.items[index]
@@ -55,7 +52,7 @@ class Mage(Player):
         
 
 class Enemy:
-    def __init__(self, name: str, hp: int, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills = None, stat_effs = []):
+    def __init__(self, name: str, hp: int, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills = None, stat_effs = [], tameable = False):
         self.hp = hp
         self.base_hp = hp
         self.dmg = dmg
@@ -64,6 +61,7 @@ class Enemy:
         self.reward = reward
         self.skills = skills
         self.stat_effs = stat_effs
+        self.tameable = tameable
 
     def addStatusEffect(self, status):
         self.stat_effs.append(status)
@@ -79,15 +77,16 @@ class Enemy:
             self.hp = 0
 
     # Reserved for swarm-like enemies
-    def call_reinforcements(self, amount: int, enemy_list):
-        goblin_count = sum(1 for enemy in enemy_list if enemy.name == "Goblin")
-        if(goblin_count <= 3):
-            index = next((i for i, e in enumerate(enemy_list) if e.name == "Goblin"), -1)
+    def call_reinforcements(self, enemy_list):
+        goblin_count = sum(1 for enemy in enemy_list if enemy.name == self.name)
+        diff = 3 - goblin_count
+        if(diff > 0):
+            index = next((i for i, e in enumerate(enemy_list) if e.name == self.name), -1)
             if index == -1:
                 return  # no hay Goblin
 
-            for i in range(amount):
-                reinforcement = Enemy(self.name, self.base_hp - 50, self.dmg, self.dmg_red, skills=self.skills)
+            for i in range(diff):
+                reinforcement = Enemy(self.name, round(self.base_hp / 2), self.dmg, self.dmg_red, skills=self.skills)
                 enemy_list.insert(index + 1 + i, reinforcement)
         else:
             self.dmg += 5

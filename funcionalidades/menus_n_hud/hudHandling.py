@@ -5,7 +5,7 @@ def drawScreen(display, hud_states, state, my_turn, main_player, level, isLastWe
     enemies_list_serialized = None
 
     display[0].fill("black")
-    texto = display[1].render("Player hp: " + str(main_player.hp) + " dmg_red: " + str(main_player.armor.dmg_red) + " gold: " + str(main_player.gd), True, (255, 255, 255))
+    texto = display[1].render("Player hp: " + str(main_player.hp) + " " + str(main_player.mp) + " dmg_red: " + str(main_player.armor.dmg_red) + " gold: " + str(main_player.gd), True, (255, 255, 255))
     display[0].blit(texto, (150, 120))
     texto = display[1].render("Level: " + str(level) + " : " + str(isLastWeaponShopLevel), True, (255, 255, 255))
     display[0].blit(texto, (700, 120))

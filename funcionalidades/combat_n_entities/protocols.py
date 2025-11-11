@@ -7,3 +7,6 @@ class Equipable(Protocol):
     def setOwner(self, owner: 'Player') -> None: ...
 
     def equip(self) -> None: ... 
+
+class Tameable(Protocol):
+    tameable = True
