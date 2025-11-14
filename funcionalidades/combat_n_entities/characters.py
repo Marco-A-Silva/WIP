@@ -1,4 +1,4 @@
-from funcionalidades.combat_n_entities.combat_items import MagicWeapon, Weapon, Item, Armor
+from funcionalidades.combat_n_entities.combat_items import  Weapon, Armor
 from .protocols import Equipable
 
 fists = Weapon("Fists", 50)
@@ -6,17 +6,20 @@ tunic = Armor("Tunic", 0.02)
 
 class Player:
 
-    def __init__(self, hp: int, mp: int, gd: int = 0, weapon: Weapon = None, armor: Armor = None, stat_effs = []):
+    def __init__(self, hp: int, mp: int, gd: int = 0, weapon: Weapon | None = None, armor: Armor | None = None, stat_effs: list | None = None, name = "Hero"):
+        self.name = name
         self.hp = hp
         self.mp = mp
         self.gd = gd
-        self.stat_effs = stat_effs
-        self.weapon = weapon
-        if self.weapon is None:
+        self.stat_effs = stat_effs or []
+        if weapon is None:
             self.equip_armament(fists)
-        self.armor = armor
-        if self.armor is None:
+        else:
+            self.weapon = weapon
+        if armor is None:
             self.equip_armament(tunic)
+        else:
+            self.armor = armor
         self.items = []
 
     def addStatusEffect(self, status):
@@ -46,21 +49,16 @@ class Player:
         self.gd -= amount
 
 
-class Mage(Player):
-    def __init__(self, hp: int, mp: int, weapon: Weapon = None):
-        super().__init__(hp, mp, weapon)
-        
-
 class Enemy:
-    def __init__(self, name: str, hp: int, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills = None, stat_effs = [], tameable = False):
+    def __init__(self, name: str, hp: int, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills: dict | None = None, stat_effs: list | None = None, tameable: bool = True):
         self.hp = hp
         self.base_hp = hp
         self.dmg = dmg
         self.dmg_red = dmg_red
         self.name = name
         self.reward = reward
-        self.skills = skills
-        self.stat_effs = stat_effs
+        self.skills = skills or {}
+        self.stat_effs = stat_effs or []
         self.tameable = tameable
 
     def addStatusEffect(self, status):

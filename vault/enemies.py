@@ -1,4 +1,4 @@
-from funcionalidades import Enemy, OverTimeEffects 
+from funcionalidades import Enemy, OverTimeEffects, modifyAttrs
 
 enemySkills = {"Goblin Gang": lambda self, **kwargs: self.call_reinforcements(kwargs["enemyList"]), 
               "Humiliation": lambda self, **kwargs: self.addStatusEffect(OverTimeEffects(self,2,effects={"dmg_red": (0.02, 1)})),

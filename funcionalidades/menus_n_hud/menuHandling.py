@@ -3,7 +3,9 @@ import json
 import copy
 from random import randint, choices
 
-def menuControl(myTurn, events, state, weaponry, bl_length, menu_list, options, selected_id, main_player, enemies_list_serialized, level, isLastWeaponShopLevel, isLastShopLevel, save_path, running):
+from funcionalidades.combat_n_entities.characters import Player
+
+def menuControl(myTurn, events, state, weaponry, bl_length, menu_list, options, selected_id, main_player: Player, enemies_list_serialized, level, isLastWeaponShopLevel, isLastShopLevel, save_path, running):
     
     shop_items = options[2]
 
@@ -61,6 +63,7 @@ def menuControl(myTurn, events, state, weaponry, bl_length, menu_list, options, 
                                         
                     case {"Weapons": True}:
                         match event.key:
+                        
                             case pygame.K_UP | pygame.K_w:
                                 selected_id = (selected_id - 1) % len(options[1])
                             case pygame.K_DOWN | pygame.K_s:
@@ -81,11 +84,13 @@ def menuControl(myTurn, events, state, weaponry, bl_length, menu_list, options, 
                             case pygame.K_DOWN | pygame.K_s:
                                 selected_id = (selected_id + 1) % len(options[2])
                             case pygame.K_RETURN | pygame.K_KP_ENTER:
-                                main_player.equip_armament(shop_items[selected_id][0])
-                                main_player.gold_remove(shop_items[selected_id][1])
-                                menu_list["Shop"] = False
-                                isLastShopLevel = True
-                                selected_id = 0
+                                if main_player.gd - shop_items[selected_id][1] > 0:
+                                    
+                                    main_player.equip_armament(shop_items[selected_id][0])
+                                    main_player.gold_remove(shop_items[selected_id][1])
+                                    menu_list["Shop"] = False
+                                    isLastShopLevel = True
+                                    selected_id = 0
                     
     return selected_id, running, isLastWeaponShopLevel, isLastShopLevel, state
                 
@@ -94,10 +99,9 @@ def drawPauseMenu(display, menu_options, selected_idx):
     overlay = pygame.Surface(display[0].get_size(), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 160))
     display[0].blit(overlay, (0, 0))
-
+    
     center_x = (display[0].get_width() // 2) - 20
     center_y = (display[0].get_height() // 2) - 20
-
 
     panel_w, panel_h = 420, 240
     panel_rect = pygame.Rect(0, 0, panel_w, panel_h)

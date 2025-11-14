@@ -1,18 +1,22 @@
 import pygame
 from random import randint
 
-def drawScreen(display, hud_states, state, my_turn, main_player, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized):
+def drawScreen(display, hud_states, state, my_turn, advParty, level, isLastWeaponShopLevel, enemies_list, enemies_list_is_serialized):
     enemies_list_serialized = None
-
+    
     display[0].fill("black")
-    texto = display[1].render("Player hp: " + str(main_player.hp) + " " + str(main_player.mp) + " dmg_red: " + str(main_player.armor.dmg_red) + " gold: " + str(main_player.gd), True, (255, 255, 255))
-    display[0].blit(texto, (150, 120))
-    texto = display[1].render("Level: " + str(level) + " : " + str(isLastWeaponShopLevel), True, (255, 255, 255))
-    display[0].blit(texto, (700, 120))
-    texto = display[1].render("Equipped Weapon:", True, (255,0,0))
-    display[0].blit(texto, (700,300))
-    texto = display[1].render(main_player.weapon.name + " " + str(main_player.weapon.m_damage) + " " + str(getattr(main_player.weapon, "magic_dmg", 0)), True, (255,255,255))
-    display[0].blit(texto, (700,340))
+
+    texto = display[1].render("Level: " + str(level) + " : " + str(isLastWeaponShopLevel), True, (255, 255, 255))   
+    display[0].blit(texto, (900, 120))
+
+    for i, char in enumerate(advParty):
+        texto = display[1].render(char.name +"'s" + " hp: " + str(char.hp) + " " + str(char.mp) + " dmg_red: " + str(char.armor.dmg_red) + " gold: " + str(char.gd), True, (255, 255, 255))
+        display[0].blit(texto, (150, 120 +40*i))
+        if i == 0: 
+            texto = display[1].render("Equipped Weapon:", True, (255,0,0))
+            display[0].blit(texto, (900,300 +120*i))
+        texto = display[1].render("- " + char.weapon.name + " " + str(char.weapon.m_damage) + " " + str(getattr(char.weapon, "magic_dmg", 0)), True, (255,255,255))
+        display[0].blit(texto, (900,340 +35*i))
 
     if my_turn:
         display[0].blit(display[1].render("Mi Turno", True, (255, 255, 255)), (10, 10))
@@ -30,8 +34,8 @@ def drawScreen(display, hud_states, state, my_turn, main_player, level, isLastWe
         x_offset += width + 20
 
     for i, en in enumerate(enemies_list):
-        texto2 = display[1].render("Enemy name: " + en.name + " Enemy hp: " + str(en.hp) + " " + str(en.dmg_red), True, display[2])
-        display[0].blit(texto2, (150, 160 + i * 40))
+        texto2 = display[1].render(en.name + " Enemy hp: " + str(en.hp) + " " + str(en.dmg_red), True, display[2])
+        display[0].blit(texto2, (150, 250 + i * 40))
         enemies_list_serialized = [{"name": e.name, "hp": e.hp, "skills": list(e.skills.keys())} for e in enemies_list]
         enemies_list_is_serialized = True
 
