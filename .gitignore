@@ -3,8 +3,11 @@
 
 # Ignorar archivos .pyc
 *.pyc
+*.exe
 
 # Ignorar archivos generados por tu IDE/editor
 .vscode/
 .idea/
 .venv/
+.dist/
+.build/

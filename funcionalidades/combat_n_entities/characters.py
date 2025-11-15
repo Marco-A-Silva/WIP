@@ -8,10 +8,11 @@ class Player:
 
     def __init__(self, hp: int, mp: int, gd: int = 0, weapon: Weapon | None = None, armor: Armor | None = None, stat_effs: list | None = None, name = "Hero"):
         self.name = name
-        self.hp = hp
+        self._hp = hp
         self.mp = mp
         self.gd = gd
         self.stat_effs = stat_effs or []
+        self.hooks = {}
         if weapon is None:
             self.equip_armament(fists)
         else:
@@ -22,8 +23,29 @@ class Player:
             self.armor = armor
         self.items = []
 
-    def addStatusEffect(self, status):
-        self.stat_effs.append(status)
+    @property
+    def hp(self):
+        return self._hp
+
+    @hp.setter
+    def hp(self, value):
+        old = self._hp
+        self._hp = max(0, value)
+
+        if "hp" in self.hooks:
+            for hook in self.hooks["hp"]:
+                hook.resolveOTE(True, old, self._hp)
+
+
+    def addStatusEffect(self, status, style: int = 0):
+        if style == 0:
+            self.stat_effs.append(status)
+        else:
+            for attr, (diff, nature) in status.effects.items():
+                if attr not in self.hooks:
+                    self.hooks[attr] = []
+                self.hooks[attr].append(status)
+
 
     def equip_armament(self, armament: Equipable):
         armament.setOwner(self)
@@ -50,8 +72,8 @@ class Player:
 
 
 class Enemy:
-    def __init__(self, name: str, hp: int, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills: dict | None = None, stat_effs: list | None = None, tameable: bool = True):
-        self.hp = hp
+    def __init__(self, name: str, hp: int, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills: dict | None = None, stat_effs: list | None = None, tameable: bool = False):
+        self._hp = hp
         self.base_hp = hp
         self.dmg = dmg
         self.dmg_red = dmg_red
@@ -59,10 +81,31 @@ class Enemy:
         self.reward = reward
         self.skills = skills or {}
         self.stat_effs = stat_effs or []
+        self.hooks = {}
         self.tameable = tameable
 
-    def addStatusEffect(self, status):
-        self.stat_effs.append(status)
+    @property
+    def hp(self):
+        return self._hp
+
+    @hp.setter
+    def hp(self, value):
+        old = self._hp
+        self._hp = max(0, value)
+
+        if "hp" in self.hooks:
+            for hook in self.hooks["hp"]:
+                hook.resolveOTE(True, old, self._hp)
+
+
+    def addStatusEffect(self, status, style: int = 0):
+        if style == 0:
+            self.stat_effs.append(status)
+        else:
+            for attr, (diff, nature) in status.effects.items():
+                if attr not in self.hooks:
+                    self.hooks[attr] = []
+                self.hooks[attr].append(status)
 
     def attack(self, target, ignore):
         target.take_damage(self.dmg, ignore)

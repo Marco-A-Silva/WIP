@@ -1,34 +1,16 @@
 {
-    "level": 9,
-    "player_hp": 965,
+    "level": 0,
+    "player_hp": 100,
     "player_mp": 100,
     "items": [
-        "Mana Potion"
+        "Health Vial"
     ],
     "weapon": {
-        "name": "Axe",
-        "m_damage": 500,
-        "magic_dmg": 100
     },
     "armor": {
         "name": "Tunic",
         "dmg_red": 0.02
     },
     "enemies": [
-        {
-            "name": "Fungal Titan",
-            "hp": 235,
-            "skills": []
-        },
-        {
-            "name": "Fungal Titan",
-            "hp": 235,
-            "skills": []
-        },
-        {
-            "name": "Guilded Automaton",
-            "hp": 210,
-            "skills": []
-        }
     ]
 }

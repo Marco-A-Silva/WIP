@@ -121,6 +121,7 @@ while running:
         for i, enemey in enumerate(enemyList, start=1): 
             key_attr = getattr(pygame, f"K_{i}") 
             inputs[str(i)] = keys[key_attr]
+            
 
         if myTurn and partyTurn < len(advParty):
             player = advParty[partyTurn]  # jugador actual
@@ -193,10 +194,13 @@ while running:
                     effect.passTurn()
                     print(effect.turns)
                     main_player.stat_effs = [e for e in main_player.stat_effs if e.turns > 0]
+
+                
+
                 
                 for enemy in enemyList:
                     outcome = random.randint(0,3)
-                    if outcome == 3:
+                    if 3 == 3:
                         skill_names = list(enemy.skills.keys())
                         if skill_names != []: 
                             skill_name = random.choice(skill_names)
@@ -210,11 +214,23 @@ while running:
                     else:
                         enemy.attack(main_player, False)    
                         print(f"{enemy.name} attacks! {enemy.dmg} {main_player.armor.dmg_red} {enemy.dmg*main_player.armor.dmg_red}")
-                    
+
+                    for attr, ote_list in enemy.hooks.items():
+                        for ote in ote_list: ote.passTurn()
+                        enemy.hooks = {attr: [ote for ote in ote_list if ote.turns > 0]for attr, ote_list in enemy.hooks.items()}
+
                 print("-----------------------------")
                 myTurn = True
                 state = "menu"
                 enemy_turn_start = None  # reiniciamos el temporizador
+
+                
+
+                for attr, ote_list in main_player.hooks.items():
+                    for ote in ote_list: ote.passTurn()
+                    main_player.hooks = {attr: [ote for ote in ote_list if ote.turns > 0]for attr, ote_list in main_player.hooks.items()}
+
+
 
         
         if enemyList:
@@ -251,6 +267,6 @@ while running:
     pygame.display.flip()
     clock.tick(120)
 
-    if main_player.hp == 0:
+    if advParty == []:
         print("El juego ha terminado: el jugador perdió.")
         running = False
