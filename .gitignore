@@ -4,6 +4,7 @@
 # Ignorar archivos .pyc
 *.pyc
 *.exe
+*.spec
 
 # Ignorar archivos generados por tu IDE/editor
 .vscode/

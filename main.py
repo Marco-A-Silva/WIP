@@ -43,12 +43,25 @@ selected_id = 0
 
 enemy_turn_start = None
 
-if getattr(sys, 'frozen', False):
-    base_path = os.path.dirname(sys.executable)
-else:
-    base_path = os.path.dirname(os.path.abspath(__file__))
+# Ruta segura para guardar el archivo de estado
+home = os.path.expanduser("~")
+app_dir = os.path.join(home, ".mi_juego")
+os.makedirs(app_dir, exist_ok=True)  # crea la carpeta si no existe
+save_path = os.path.join(app_dir, "SaveState.json")
 
-save_path = os.path.join(base_path, "SaveState.json")
+if not os.path.exists(save_path):
+    # Creamos el archivo con contenido inicial
+    initial_data = {
+        "player_hp": 100,
+        "player_mp": 50,
+        "level": 0,
+        "weapon": {},
+        "armor":{},
+        "items": ["Health Vial"],
+        "enemies": []
+    }
+    with open(save_path, "w") as f:
+        json.dump(initial_data, f)
 
 with open(save_path, "r") as f:
     data = json.load(f)
