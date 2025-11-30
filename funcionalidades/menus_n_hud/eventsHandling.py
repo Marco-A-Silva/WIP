@@ -15,7 +15,7 @@ def eventHandling(display, level, my_turn, lastMenuOpened, lastEvent, menu_list)
         menu_list["Shop"] = True
         lastMenuOpened["Shop"][0] = level
 
-    if level % 10 == 0 and level % 2 == 0:
+    if level % 10 == 0 and level % 2 == 0 and level != 0:
         isBossLevel = True
 
     return menu_list, lastMenuOpened, isBossLevel

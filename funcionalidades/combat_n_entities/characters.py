@@ -2,7 +2,7 @@ from funcionalidades.combat_n_entities.combat_items import  Weapon, Armor
 from .protocols import Equipable
 import random
 
-fists = Weapon("Fists", 20)
+fists = Weapon("Fists", 50)
 tunic = Armor("Tunic", 0.01)
 
 class Player:
