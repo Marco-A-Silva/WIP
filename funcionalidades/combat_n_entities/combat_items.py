@@ -1,38 +1,52 @@
 from .protocols import Equipable
  
+stats = {"vit": 0, "mnd": 1, "int": 2, "str": 3, "lck": 4, "chr": 5, "awe": 6, "gre": 7}
+
 
 def modifyAttrs(target, changes: dict):
-    
+
     for attr, val in changes.items():
-        if hasattr(target, attr):
-            # Si el valor es callable (función), lo ejecuta con el valor actual
-            if callable(val):
-                setattr(target, attr, val(getattr(target, attr)))
-            else:
-                setattr(target, attr, val)
+        if attr in stats: attr = stats[attr]
+        if type(attr) == int:
+            target.statBlock[attr] += val
+        else:
+            if hasattr(target, attr):
+                # Si el valor es callable (función), lo ejecuta con el valor actual
+                if callable(val):
+                    setattr(target, attr, val(getattr(target, attr)))
+                else:
+                    setattr(target, attr, val)
 
 class Weapon:
-    def __init__(self, name: str, m_damage: int, owner = None):
+    def __init__(self, name: str, melee_dmg: int, owner = None):
         self.name = name
-        self.m_damage = m_damage
+        self.magic_dmg = 0
         self.owner = owner
-
+        self.melee_dmg = melee_dmg 
+        
     def setOwner(self, owner):
         self.owner = owner
 
     def equip(self):
-        if self.owner: self.owner.weapon = self
+        if self.owner: 
+            self.owner.weapon = self
+            self.melee_dmg += self.owner.statBlock[3]*0.10* self.melee_dmg
 
     def melee_attack(self, target,ignore):
-        target.take_damage(self.m_damage, ignore)
+        target.take_damage(self.melee_dmg, ignore)
 
 class MagicWeapon(Weapon):
-    def __init__(self, name, m_damage, magic_dmg):
-        super().__init__(name, m_damage)
+    def __init__(self, name, melee_dmg, magic_dmg):
+        super().__init__(name, melee_dmg)
         self.magic_dmg = magic_dmg
 
-    def cast_spell(self, target):
-        target.take_damage(self.magic_dmg)
+    def equip(self):
+        if self.owner: 
+            self.owner.weapon = self
+            self.magic_dmg += self.owner.statBlock[2]*0.10* self.magic_dmg
+
+    def cast_spell(self, target, ignore: bool = False):
+        target.take_damage(self.magic_dmg, ignore)
         self.owner.mp -= 10
 
 
@@ -82,9 +96,9 @@ class OverTimeEffects:
 
         self.treshold = treshold
         self.turns = turns
+        self.og_turns = turns
         self.target = target
         self.effects = effects
-        self.first = True
 
         # Aplica todos los efectos al crear el objeto
         modifyAttrs(target, {attr: (lambda d=diff: (lambda x: x + d))() for attr, (diff,_) in effects.items() if _ == 0 or _ == 1})
@@ -93,15 +107,18 @@ class OverTimeEffects:
         # Revierte todos los efectos
         for attr, (diff, nature) in self.effects.items():
             match nature:
+                case -1: #Delayed Time Effect
+                    if self.turns == 0:
+                        attr = attr.replace("_fin","")
+                        effects = {attr: (diff,1)}
+                        self.target.addStatusEffect(OverTimeEffects(self.target, self.og_turns, effects))
                 case 0: #One time effect
                     pass
                 case 1: #Limited time effect
                     if self.turns == 0: 
                         modifyAttrs(self.target, {attr: (lambda d=diff: (lambda x: x - d))()})
                 case 2: #Every turn for X turns
-                    if not self.first:
-                        modifyAttrs(self.target, {attr: (lambda d=diff: (lambda x: x + d))()})
-                    self.first = False
+                    modifyAttrs(self.target, {attr: (lambda d=diff: (lambda x: x + d))()})
                 case 3: #Triggered effect
                     if trigger:
                         val = getattr(self.target, attr)
