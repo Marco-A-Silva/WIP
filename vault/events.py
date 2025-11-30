@@ -1,5 +1,8 @@
-from funcionalidades.combat_n_entiwties.combat_items import OverTimeEffects
+from funcionalidades.combat_n_entities.combat_items import OverTimeEffects
 from funcionalidades.combat_n_entities.combat_items import modifyAttrs
+import pygame, time
+
+
 
 
 class Event:
@@ -23,7 +26,7 @@ class Event:
             action = self.consequences[self.answer][0]  # Failure
 
         print(self.roll)
-        print(action[1])
+        context["addNotification"](action[1])
         action[0](context)
         
         

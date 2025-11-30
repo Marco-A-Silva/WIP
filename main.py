@@ -1,4 +1,4 @@
-import pygame, json, random, os, sys, copy
+import pygame, json, random, os, sys, copy, time
 from vault import blacksmith, bl_length, shopItems, enemies, bosses, enemySkills
 from funcionalidades import Player, Enemy, Weapon, MagicWeapon, Armor
 from funcionalidades import (eventHandling, drawPauseMenu, drawWeaponMenu, drawShopMenu, menuControl, drawScreen, 
@@ -10,6 +10,30 @@ def passTurn(partyTurns):
     if partyTurns >= len(advParty):
         return 0, False  # reinicia turno y termina la ronda
     return partyTurns, True
+
+def drawNotification(display, notification, y_offset=0):
+    if time.time() > notification["expires"]:
+        return
+
+    font = display[1][1]
+    rendered = font.render(notification["text"], True, (255, 255, 255))
+    text_rect = rendered.get_rect(center=(display[0].get_width() // 2, 50 + y_offset))
+
+    padding_x = 15
+    padding_y = 8
+    box_rect = pygame.Rect(
+        text_rect.x - padding_x,
+        text_rect.y - padding_y,
+        text_rect.width + padding_x*2,
+        text_rect.height + padding_y*2
+    )
+
+    pygame.draw.rect(display[0], (50,50,50), box_rect, border_radius=10)
+    pygame.draw.rect(display[0], (200,200,255), box_rect, 2, border_radius=10)
+    display[0].blit(rendered, text_rect)
+
+def addNotification(text, duration=1.5):
+    notifications.append({"text": text, "expires": time.time() + duration})
 
 
 pygame.init()
@@ -111,6 +135,7 @@ eventList = {"Pause" : False, "Weapons" : False, "Shop" : False, "lvlUp": False,
 selected_id = 0
 lastMenuOpen = {"Shop": [level,True], "Weapons": [level,True]}
 lastEvent = {"lvldUp": False, "bossLevel": False, "randEvent": False}
+notifications = []
 randEvent = None
 
 item_selection = None
@@ -134,7 +159,7 @@ while running:
     hud_states["party"] = ["[" + str(i) + "]" + char.name for i,char in enumerate(advParty)]
     hud_states["attack"] = [" [" + str(index+1) + "] - " + enemy.name for index, enemy in enumerate(enemyList)]
 
-    menuOptions = [["Continue", "Quit to Desktop"],["Yes", "No"], item_selection]
+    menuOptions = [["Continue", "Quit to Desktop"],["Yes", "No"], item_selection, randEvent.actions if randEvent else ""]
 
     # Events Handling
     eventHandlingArgs = [display, level, myTurn, lastMenuOpen, lastEvent, eventList]
@@ -143,6 +168,14 @@ while running:
     # Hud Setup
     drawScreenArgs = [display, hud_states, state, myTurn, advParty, level, lastMenuOpen["Weapons"], enemyList, enemyList_IsSerialized, partyTurn, tabPressed]
     enemyList_serialized, enemyList_IsSerialized, tabPressed = drawScreen(*drawScreenArgs)
+
+    y_offset = 0
+    for n in notifications:
+        drawNotification(display, n, y_offset)
+        y_offset += 50  # o lo que quieras
+
+    notifications = [n for n in notifications if time.time() <= n["expires"]]
+
 
     # Safely get events;
     try:
@@ -156,11 +189,14 @@ while running:
         "player": player,
         "enemyList": enemyList,
         "toggleMenu": lambda key: toggleDict(eventList, key),
-        "toggleEvent": lambda count: enemyList.insert(0,copy.deepcopy(random.choices(bosses, k=count))) if count != 0 else None
+        "toggleEvent": lambda count: enemyList.insert(0,copy.deepcopy(random.choices(bosses, k=count))) if count != 0 else None,
+        "addNotification": lambda key: addNotification(key, 1)
     }
 
     # Menu Control
-    menuControlArgs = [myTurn, events, randEvent, eventContext, state, blacksmith, bl_length, eventList, menuOptions, selected_id, player, advParty, enemyList_serialized, level, lastMenuOpen["Weapons"], lastMenuOpen["Shop"], save_path, running, all_rects]
+    menuControlArgs = [myTurn, events, randEvent, eventContext, state, blacksmith, bl_length, eventList, menuOptions, 
+                        selected_id, player, advParty, enemyList_serialized, level, lastMenuOpen["Weapons"], lastMenuOpen["Shop"], 
+                        save_path, running, all_rects]
     selected_id, running, lastMenuOpen["Weapons"][1], lastMenuOpen["Shop"][1], state = menuControl(*menuControlArgs)
 
     # Game input only when menu is not open
@@ -281,9 +317,11 @@ while running:
                                 "enemyList": enemyList
                             }
                             enemy.skills[skill_name](**context)
+                            addNotification(f"{enemy.name} uses {skill_name}!",1)
                             print(f"{enemy.name} uses {skill_name}!")
                     else:
                         enemy.attack(target, False)    
+                        addNotification(f"{enemy.name} attacks, dealing {enemy.dmg}dmg!",1)
                         print(f"{enemy.name} attacks! {enemy.dmg} {target.armor.dmg_red} {enemy.dmg*target.armor.dmg_red}")
 
                     for attr, ote_list in enemy.hooks.items():
@@ -309,8 +347,8 @@ while running:
                         if tame_chance == 5: advParty.append(Player(enemy.base_hp,0, name=enemy.name))
                     enemyList = [e for e in enemyList if e.hp > 0]
                     player.gold_reward(enemy.reward)
-                    eventList["lvldUp"] = player.gainXP(enemy.reward, eventList["lvldUp"])
-                    lastEvent["lvlUp"] = eventList["lvldUp"]
+                    eventList["lvlUp"] = player.gainXP(enemy.reward, eventList["lvlUp"])
+                    lastEvent["lvldUp"] = eventList["lvlUp"]
                     break   
         else:
             level += 1
@@ -326,7 +364,7 @@ while running:
             case {"Shop": True}:
                 item_selection, all_rects[1] = drawShopMenu(display, shopItems, item_selection, selected_id)
             case {"lvlUp": True}:  
-                all_rects[0] = drawLevelUpMenu(display, player, menuOptions[0], selected_id)
+                all_rects[0] = drawLevelUpMenu(display, player, selected_id)
             case {"randEvent": True}:  
                 drawRandomEvent(display, randEvent, selected_id)
 

@@ -248,7 +248,7 @@ def drawShopMenu(display, items, random_items, selected_idx_s):
 
     return random_items, item_rects  # <-- devuelvo los rects también
 
-def drawLevelUpMenu(display, player, menu_options, selected_idx):
+def drawLevelUpMenu(display, player, selected_idx):
     overlay = pygame.Surface(display[0].get_size(), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 160))
     display[0].blit(overlay, (0, 0))
