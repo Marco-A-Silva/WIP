@@ -374,5 +374,9 @@ while running:
     advParty = [p for p in advParty if p._hp > 0]
 
     if advParty == []:
-        print("El juego ha terminado: el jugador perdió.")
-        running = False
+    print("El juego ha terminado: el jugador perdió.")
+
+    if os.path.exists(save_path):
+        os.remove(save_path)
+
+    running = False
