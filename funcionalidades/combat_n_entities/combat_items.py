@@ -1,7 +1,6 @@
 from .protocols import Equipable
  
-stats = {"vit": 0, "mnd": 1, "int": 2, "str": 3, "lck": 4, "chr": 5, "awe": 6, "gre": 7}
-
+stats = {"vit": 0, "mnd": 1, "int": 2, "str": 3, "lck": 4, "chr": 5, "awe": 6, "gre": 7,"end":8,"dex":9}
 
 def modifyAttrs(target, changes: dict):
 
@@ -18,36 +17,48 @@ def modifyAttrs(target, changes: dict):
                     setattr(target, attr, val)
 
 class Weapon:
-    def __init__(self, name: str, melee_dmg: int, owner = None):
+    def __init__(self, name: str, melee_dmg: int, weight=1.0, skills = None, owner = None):
         self.name = name
         self.magic_dmg = 0
         self.owner = owner
         self.melee_dmg = melee_dmg 
+        self.skills = skills or {}
+        self.weight = weight
         
     def setOwner(self, owner):
         self.owner = owner
 
-    def equip(self):
+    def equip(self, isMod):
         if self.owner: 
             self.owner.weapon = self
-            self.melee_dmg += self.owner.statBlock[3]*0.10* self.melee_dmg
+            self.melee_dmg += self.owner.statBlock[3]*0.10* self.melee_dmg if isMod else 0
 
-    def melee_attack(self, target,ignore):
+    def useSkill(self, index, target):
+        self.skills[index](self,target)
+        
+    def melee_attack(self, target, ignore):
+        cost = 8*self.weight # 8 is the base stamina cost
+
+        if self.owner.sta <= cost:
+            return  # o ataque fallido/debilitado
+
+        self.owner.sta -= cost
         target.take_damage(self.melee_dmg, ignore)
 
 class MagicWeapon(Weapon):
-    def __init__(self, name, melee_dmg, magic_dmg):
-        super().__init__(name, melee_dmg)
+    def __init__(self, name, melee_dmg, magic_dmg, weight=1.0, mana_cost=20, skills = None):
+        super().__init__(name, melee_dmg, weight=weight,skills=skills)
         self.magic_dmg = magic_dmg
+        self.mana_cost = mana_cost
 
-    def equip(self):
+    def equip(self,isMod):
         if self.owner: 
             self.owner.weapon = self
-            self.magic_dmg += self.owner.statBlock[2]*0.10* self.magic_dmg
+            self.magic_dmg += self.owner.statBlock[2]*0.10* self.magic_dmg if isMod else 0
 
     def cast_spell(self, target, ignore: bool = False):
         target.take_damage(self.magic_dmg, ignore)
-        self.owner.mp -= 10
+        self.owner.mp -= self.mana_cost
 
 
 class Item:
@@ -66,7 +77,7 @@ class Item:
         self.owner = None
         return item
 
-    def equip(self):
+    def equip(self, isMod):
         for i in self.owner.items:
             if i.name == self.name:
                 i.uses += self.uses
@@ -84,7 +95,7 @@ class Armor:
     def setOwner(self, owner):
         self.owner = owner
 
-    def equip(self):
+    def equip(self, isMod):
         if self.owner: self.owner.armor = self
 
 class OverTimeEffects:
@@ -102,6 +113,10 @@ class OverTimeEffects:
 
         # Aplica todos los efectos al crear el objeto
         modifyAttrs(target, {attr: (lambda d=diff: (lambda x: x + d))() for attr, (diff,_) in effects.items() if _ == 0 or _ == 1})
+    
+    def passTurn(self):
+        self.turns -= 1
+        self.resolveOTE()
 
     def resolveOTE(self, trigger: int = False, hp:int = 0, mod: int = 0):
         # Revierte todos los efectos
@@ -133,7 +148,6 @@ class OverTimeEffects:
                         # Si delta > 0 → se intentó curar → cancelar
                         if delta > 0:
                             setattr(self.target, f"_{attr}", final_value)
-
                 case 5: #Prevents descrease of a stat
                     if trigger:
                         old = hp      # HP antes del cambio
@@ -145,10 +159,4 @@ class OverTimeEffects:
                         # Si delta > 0 → se intentó curar → cancelar
                         if delta < 0:
                             setattr(self.target, f"_{attr}", final_value)
-                        
-                    
-            
-    def passTurn(self):
-        self.turns -= 1
-        self.resolveOTE()
         

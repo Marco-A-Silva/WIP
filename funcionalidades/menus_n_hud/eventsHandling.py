@@ -66,16 +66,25 @@ def drawRandomEvent(display, event, selected_idx):
 
     # ACTION BELOW DESCRIPTION
     action_surf = font.render(event.choice, True, (255, 255, 255))
-    action_rect = action_surf.get_rect(center=(center_x, y + 10))
+    action_rect = action_surf.get_rect(center=(center_x, y + 15))
     display[0].blit(action_surf, action_rect)
 
-    # OPTIONS
-    opt_y = action_rect.bottom + 30
+    # OPTIONS — centradas entre action_rect.bottom y panel_rect.bottom
+    space_top = action_rect.bottom
+    space_bottom = panel_rect.bottom
+    available_h = space_bottom - space_top
+
+    line_h = font.get_height() + 10  # espacio vertical por opción
+    total_h = len(event.actions) * line_h
+
+    start_y = space_top + (available_h - total_h) // 2
+
     for i, opt in enumerate(event.actions):
         color = (255, 255, 100) if i == selected_idx else (255, 255, 255)
         opt_surf = font.render(opt, True, color)
-        opt_rect = opt_surf.get_rect(center=(center_x, opt_y + i * 60))
+        opt_rect = opt_surf.get_rect(center=(center_x, start_y + i * line_h))
         display[0].blit(opt_surf, opt_rect)
+
 
 
 

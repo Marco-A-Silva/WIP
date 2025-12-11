@@ -7,28 +7,30 @@ tunic = Armor("Tunic", 0.01)
 
 class Player:
 
-    def __init__(self, hp: float, mp: int, max_hp:int = 0, max_mp:int = 0, level: int = 0, xp2level: int = 50, xp: int = 0, gd: int = 0, weapon: Weapon | None = None, armor: Armor | None = None, stat_effs: list | None = None, name = "Hero"):
+    def __init__(self,applyMods, hp: float, mp:int = 100, sta:int = 60, max_sta:int = 60, max_hp:int = 0, max_mp:int = 0, level: int = 0, xp2level: int = 50, xp: int = 0, gd: int = 0, weapon: Weapon | None = None, armor: Armor | None = None, stat_effs: list | None = None, statBlock: list = [], name = "Hero"):
         self.name = name
         self.level = level
         self.xp2level = xp2level
         self.xp = xp
-        self.statBlock = [random.randint(0,11) for i in range(8)] 
-        """Vitality(hp)/Mind(mp)/Inteligence(magic_dmg)/Strength(melee_dmg)/Luck/Charisma/Awareness/Greed """
-        self._hp = hp + 20*self.statBlock[0]
+        self.statBlock = statBlock or [random.randint(0,11) for i in range(10)]
+        """Vitality(hp)/Mind(mp)/Inteligence(magic_dmg)/Strength(melee_dmg)/Luck/Charisma/Awareness/Greed/Endurance/Dexterity"""
+        self._hp = hp + 20*self.statBlock[0] if applyMods else hp
         self.max_hp = self._hp
-        self.mp = mp + 20*self.statBlock[1]
+        self.mp = mp + 20*self.statBlock[1] if applyMods else mp
         self.max_mp = self.mp or max_mp
+        self.sta = sta
+        self.max_sta = max_sta or sta
         self.gd = gd
         self.stat_effs = stat_effs or []
         self.hooks = {}
         if weapon is None:
-            self.equip_armament(fists)
+            self.equip_armament(fists,applyMods)
         else:
-            self.weapon = weapon
+            self.equip_armament(weapon,applyMods)
         if armor is None:
-            self.equip_armament(tunic)
+            self.equip_armament(tunic, applyMods)
         else:
-            self.armor = armor
+            self.equip_armament(armor,applyMods)
         self.items = []
 
     @property
@@ -67,9 +69,9 @@ class Player:
                 self.hooks[attr].append(status)
 
 
-    def equip_armament(self, armament: Equipable):
+    def equip_armament(self, armament: Equipable, isMod):
         armament.setOwner(self)
-        armament.equip()
+        armament.equip(isMod)
 
     def useItem(self,index):
         self.items[index].function(self.items[index])
@@ -99,9 +101,12 @@ class Player:
                 self.mp += self.max_mp*0.1
                 if self.mp > self.max_mp: self.max_mp = self.mp
             case 2:
-                self.weapon.magic_dmg += self.weapon.magic_dmg*0.01*self.statBlock[2]
+                self.weapon.magic_dmg += self.weapon.magic_dmg*0.05*self.statBlock[2]
             case 3:
-                self.weapon.melee_dmg += self.weapon.melee_dmg*0.01*self.statBlock[3]
+                self.weapon.melee_dmg += self.weapon.melee_dmg*0.05*self.statBlock[3]
+            case 8:
+                self.sta += self.max_sta*0.05*self.statBlock[8] 
+                if self.sta > self.max_sta: self.sta = self.max_sta
 
 class Enemy:
     def __init__(self, name: str, hp: float, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills: dict | None = None, stat_effs: list | None = None, tameable: bool = False):

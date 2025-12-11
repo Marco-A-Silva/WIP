@@ -7,7 +7,7 @@ from funcionalidades.combat_n_entities.characters import Player
 
 def menuControl(myTurn, events, randEvent: Event, eventContext, state, weaponry, bl_length, menu_list,
                 options, selected_id, main_player: Player, advParty, enemies_list_serialized, level, 
-                isLastWeaponShopLevel, isLastShopLevel, save_path, running, rects):
+                isLastWeaponShopLevel, isLastShopLevel, save_path, running, rects, targetArrow, maxTarget):
     
     shop_items = options[2]
 
@@ -22,10 +22,14 @@ def menuControl(myTurn, events, randEvent: Event, eventContext, state, weaponry,
                     selected_id = 0
             
             elif myTurn or any(menu_list):
+                if (event.key == pygame.K_LEFT or event.key == pygame.K_UP) and targetArrow != 0: targetArrow -= 1
+                if (event.key == pygame.K_RIGHT or event.key == pygame.K_DOWN) and targetArrow < maxTarget: targetArrow += 1
+
                 if state == "menu" and myTurn and not any(menu_list.values()):
                     if event.key == pygame.K_LSHIFT: state = "attack"
                     elif event.key == pygame.K_LCTRL: state = "items"
                     elif event.key == pygame.K_a and getattr(main_player.weapon, "magic_dmg", 0) != 0: state = "attack"
+                    elif event.key == pygame.K_s: state = "skills"
                 elif event.key == pygame.K_b:
                     state = "menu"
 
@@ -47,14 +51,19 @@ def menuControl(myTurn, events, randEvent: Event, eventContext, state, weaponry,
 
                                         for player in advParty:
                                             advParty_serialized.append({
+                                                "player_name": player.name,
                                                 "player_hp": player._hp,
                                                 "player_max_hp": player.max_hp,
                                                 "player_mp": player.mp,
                                                 "player_max_mp": player.max_mp,
+                                                "player_sta": player.sta,
+                                                "player_max_sta": player.max_sta,
+                                                "player_statBlock": player.statBlock,
                                                 "weapon": {
                                                     "name": player.weapon.name,
                                                     "melee_dmg": player.weapon.melee_dmg,
-                                                    "magic_dmg": getattr(player.weapon, "magic_dmg", 0)
+                                                    "magic_dmg": getattr(player.weapon, "magic_dmg", 0),
+                                                    "skills": list(player.weapon.skills.keys())
                                                 },
                                                 "armor": {
                                                     "name": player.armor.name,
@@ -82,8 +91,7 @@ def menuControl(myTurn, events, randEvent: Event, eventContext, state, weaponry,
                             case pygame.K_RETURN | pygame.K_KP_ENTER:
                                 if selected_id == 0:  # "Yes"
                                     x = randint(0, bl_length-1)   
-                                    main_player.equip_armament(weaponry[x])
-
+                                    main_player.equip_armament(weaponry[x], True)
                                 menu_list["Weapons"] = False
                                 isLastWeaponShopLevel = True
                                 selected_id = 0
@@ -137,7 +145,7 @@ def menuControl(myTurn, events, randEvent: Event, eventContext, state, weaponry,
                                 main_player.updStats(i)
 
 
-    return selected_id, running, isLastWeaponShopLevel, isLastShopLevel, state
+    return selected_id, running, isLastWeaponShopLevel, isLastShopLevel, state, targetArrow
                 
 
 def drawPauseMenu(display, menu_options, selected_idx):
@@ -261,7 +269,9 @@ def drawLevelUpMenu(display, player, selected_idx):
         "Luck " + str(player.statBlock[4]),
         "Charisma " + str(player.statBlock[5]),
         "Awareness " + str(player.statBlock[6]),
-        "Greed " + str(player.statBlock[7])
+        "Greed " + str(player.statBlock[7]),
+        "Endurance " + str(player.statBlock[8]),
+        "Dexterity " + str(player.statBlock[9])
     ]
 
     # Menú alto y angosto
@@ -273,7 +283,7 @@ def drawLevelUpMenu(display, player, selected_idx):
 
     rects = []
 
-    rows = 4
+    rows = 5
     cols = 2
     padding_x = 20
     padding_y = 20

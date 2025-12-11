@@ -19,7 +19,7 @@ enemySkills = {
     "Smoke Screen": lambda self, **kwargs: self.addStatusEffect(OverTimeEffects(self,2,effects={"dmg_red": (0.4, 1)})),
     "Leech Life": lambda self, **kwargs: (modifyAttrs(self, {"hp": lambda x: x+10}), 
                                 modifyAttrs(kwargs["main_player"], {"hp": lambda x: x-10})),
-    "Reverse Cursed Technique": lambda self, **kwargs: (self.addStatusEffect(OverTimeEffects(kwargs["main_player"],2,effects={"hp": (-kwargs["main_player"].weapon.melee_dmg,0)},),1), 
+    "Reverse Cursed Technique": lambda self, **kwargs: (self.addStatusEffect(OverTimeEffects(kwargs["main_player"],2,effects={"hp": (-kwargs["main_player"].weapon.melee_dmg*0.5,0)},),1), 
                                                         self.addStatusEffect(OverTimeEffects(self,2,effects={"hp": (0.4,5)}),1)),
     "Ashen Return": lambda self, **kwargs: self.addStatusEffect(OverTimeEffects(self,2,effects={"hp": (self.base_hp*0.5,3)},treshold=0),1)
 }
@@ -43,7 +43,7 @@ enemies = [
     Enemy("Blight Horror", 160, dmg=22, skills={"Toxic Spores": enemySkills["Toxic Spores"], "Berserk": enemySkills["Berserk"],"Call Minions": enemySkills["Call Reinforcements"]}, reward=20),
     Enemy("Lava Golem", 230, dmg=28, skills={"Cinder Swipe": enemySkills["Cinder Swipe"], "Harden": enemySkills["Harden"]}, reward=28),
     Enemy("Storm Elemental", 170, dmg=20, skills={"Sea's Call": enemySkills["Sea's Call"], "Overclocked Strike": enemySkills["Overclocked Strike"]}, reward=22),
-    Enemy("Necro Lich", 190, dmg=22, skills={"Shroud": enemySkills["Shroud"], "Reverse Cursed Technique": enemySkills["Reverse Cursed Technique"]}, reward=25),
+    Enemy("Necro Lich", 130, dmg=22, skills={"Shroud": enemySkills["Shroud"], "Reverse Cursed Technique": enemySkills["Reverse Cursed Technique"]}, reward=25),
     Enemy("Forest Treant", 210, dmg=24, skills={"Taunt": enemySkills["Taunt"], "Harden": enemySkills["Harden"]}, reward=26),
 ]
 

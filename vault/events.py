@@ -3,8 +3,6 @@ from funcionalidades.combat_n_entities.combat_items import modifyAttrs
 import pygame, time
 
 
-
-
 class Event:
     def __init__(self,description,stat,choice,actions,rewards,consequences,odds, answer:int = 0, roll:int = 0):
         self.description = description
@@ -35,9 +33,63 @@ class Event:
 
 # Events that are good yet can end badly
 goodEvents = [
-    Event("",
+    Event("A man offers you an armament for your adventure, he says 'Here, its dangerous to go alone'",
         (7,),
-        "",
+        "Do you want to give it a try?",
+        ["Yes", "Rather not"],
+        [
+            #OPT 0 Successes
+            [
+                [
+                    lambda context: context["toggleMenu"]("Weapons"),
+                    ""
+                ],
+                [
+                    lambda context: context["toggleMenu"]("Weapons"),
+                    ""
+                ]
+            ],
+            #OPT 1 Successes
+            [
+                [
+                    lambda context: None,
+                    ""
+                ],
+                [
+                    lambda context: None,
+                    ""
+                ]
+            ],
+        ],
+        [        
+            #OPT 0 Failures
+            [
+                [
+                    lambda context: lambda context: context["toggleMenu"]("Weapons"),
+                    ""
+                ],
+                [
+                    lambda context: lambda context: context["toggleMenu"]("Weapons"),
+                    ""
+                ]
+            ],
+            #OPT 1 Failures
+            [
+                [
+                    lambda context: None,
+                    ""
+                ],
+                [
+                    lambda context: None,
+                    ""
+                ]
+            ],
+        ]
+        ,8
+    ),
+    Event("You find yourself in the familiar cozy shop you've learned to appreciate",
+        (7,),
+        "Would you want to come in?",
         ["Shop", "Rather not"],
         [
             #OPT 0 Successes
@@ -48,18 +100,18 @@ goodEvents = [
                 ],
                 [
                     lambda context: context["toggleMenu"]("Shop"),
-                    "You werent convincing enough, and so your bargain was met by a counter-offer and you paid double the price for some old stale bread"
+                    ""
                 ]
             ],
             #OPT 1 Successes
             [
                 [
                     lambda context: None,
-                    "You've beaten every single merchant to a pulp, that ought to buy you a bad reputation"
+                    ""
                 ],
                 [
                     lambda context: None,
-                    "You werent convincing enough, and so your bargain was met by a counter-offer and you paid double the price for some old stale bread"
+                    ""
                 ]
             ],
         ],
@@ -68,22 +120,22 @@ goodEvents = [
             [
                 [
                     lambda context: lambda context: context["toggleMenu"]("Shop"),
-                    "You werent able to come to an agreement with the merchants, they did throw a couple of rocks at you while they were fleeing the scene"
+                    ""
                 ],
                 [
                     lambda context: lambda context: context["toggleMenu"]("Shop"),
-                    "You angered the merchants, they left without making you a deal"
+                    ""
                 ]
             ],
             #OPT 1 Failures
             [
                 [
                     lambda context: None,
-                    "You werent able to come to an agreement with the merchants, they did throw a couple of rocks at you while they were fleeing the scene"
+                    ""
                 ],
                 [
                     lambda context: None,
-                    "You angered the merchants, they left without making you a deal"
+                    ""
                 ]
             ],
         ]
@@ -547,22 +599,22 @@ badEvents = [
             # OPT 0 Successes
             [
                 [
-                    lambda context: context["toggleEvent"](0),
+                    lambda context: context["addBoss"](0),
                     "You break the trap and overpower the thieves, taking their belongings."
                 ],
                 [
-                    lambda context: context["toggleEvent"](1),
+                    lambda context: context["addBoss"](1),
                     "You escape and beat them down, grabbing a handful of gold."
                 ]
             ],
             # OPT 1 Successes
             [
                 [
-                    lambda context: context["toggleEvent"](0),
+                    lambda context: context["addBoss"](0),
                     "You convince the thieves you're worth more alive. They let you go and even give you a cut."
                 ],
                 [
-                    lambda context: context["toggleEvent"](1),
+                    lambda context: context["addBoss"](1),
                     "Your words soften them. You are released without harm."
                 ]
             ]
@@ -571,22 +623,22 @@ badEvents = [
             # OPT 0 Failures
             [
                 [
-                    lambda context: context["toggleEvent"](1),
+                    lambda context: context["addBoss"](1),
                     "You struggle but fail. The trap tightens and bruises your body."
                 ],
                 [
-                    lambda context: context["toggleEvent"](2),
+                    lambda context: context["addBoss"](2),
                     "You thrash violently, angering the thieves. They beat you severely."
                 ]
             ],
             # OPT 1 Failures
             [
                 [
-                    lambda context: context["toggleEvent"](1),
+                    lambda context: context["addBoss"](1),
                     "Your negotiation fails. The thieves force you to pay for your freedom."
                 ],
                 [
-                    lambda context: context["toggleEvent"](2),
+                    lambda context: context["addBoss"](2),
                     "Your voice cracks. They mock you and kick you repeatedly."
                 ]
             ],

@@ -1,5 +1,5 @@
 import pygame, json, random, os, sys, copy, time
-from vault import blacksmith, bl_length, shopItems, enemies, bosses, enemySkills
+from vault import blacksmith, bl_length, shopItems, enemies, bosses, enemySkills, magicSkills, meleeSkills
 from funcionalidades import Player, Enemy, Weapon, MagicWeapon, Armor
 from funcionalidades import (eventHandling, drawPauseMenu, drawWeaponMenu, drawShopMenu, menuControl, drawScreen, 
                             drawLevelUpMenu, pickNewEnemies, drawRandomEvent, getRandEvent)
@@ -32,7 +32,7 @@ def drawNotification(display, notification, y_offset=0):
     pygame.draw.rect(display[0], (200,200,255), box_rect, 2, border_radius=10)
     display[0].blit(rendered, text_rect)
 
-def addNotification(text, duration=1.5):
+def addNotification(text, duration=2):
     notifications.append({"text": text, "expires": time.time() + duration})
 
 
@@ -44,17 +44,21 @@ fonts = [pygame.font.SysFont("Arial", 30),pygame.font.SysFont("Arial", 20),pygam
 display = [screen, fonts, colore]
 
 clock = pygame.time.Clock()
-running = True
+running = False
 myTurn = True
+
+isFirstRun = False
 
 shiftPressed = False
 aPressed = False
+rPressed = False
+sPressed = False
 ctrlPressed = False
 tabPressed = False
 
 enemyCount = 0
 enemyList = []
-enemyList_serialized = None
+enemyList_serialized = None 
 enemyList_IsSerialized = False
 
 all_rects = [None, None]
@@ -71,23 +75,27 @@ os.makedirs(app_dir, exist_ok=True)  # crea la carpeta si no existe
 save_path = os.path.join(app_dir, "SaveState.json")
 
 if not os.path.exists(save_path):
+    isFirstRun = True
     initial_data = {
+        "level": 0,
         "advParty": [
             {
                 "player_hp": 500,
                 "player_max_hp": 500,
                 "player_mp": 100,
                 "player_max_mp": 100,
+                "player_sta": 60,
+                "player_max_sta":60,
+                "player_statBlock": [10 for i in range(10)],
                 "weapon": {},
                 "armor": {},
                 "items": ["Health Vial"]
             }
         ],
-        "level": 0,
         "enemies": []
     }
     with open(save_path, "w") as f:
-        json.dump(initial_data, f)
+        json.dump(initial_data, f, indent=4)
 
 with open(save_path, "r") as f:
     data = json.load(f)
@@ -111,20 +119,22 @@ with open(save_path, "r") as f:
         if weapon_data:
             if weapon_data.get("magic_dmg", 0) > 0:
                 weapon_eq = MagicWeapon(weapon_data["name"],weapon_data["melee_dmg"],weapon_data["magic_dmg"])
+                weapon_eq.skills = {key: magicSkills[key] for key in weapon_data["skills"]}
             else:
                 weapon_eq = Weapon(weapon_data["name"],weapon_data["melee_dmg"])
+                weapon_eq.skills = {key: meleeSkills[key] for key in weapon_data["skills"]}
 
         armor_data = p.get("armor", {})
         armor_eq = None
         if armor_data:
             armor_eq = Armor(armor_data["name"],armor_data["dmg_red"])
 
-        player_obj = Player(p["player_hp"],p["player_mp"],max_hp=p.get("player_max_hp", 0),max_mp=p.get("player_max_mp", 0),weapon=weapon_eq,armor=armor_eq)
+        player_obj = Player(isFirstRun,p["player_hp"],p["player_mp"],p["player_sta"], max_sta=p.get("player_max_sta",0),max_hp=p.get("player_max_hp", 0),max_mp=p.get("player_max_mp", 0),weapon=weapon_eq,armor=armor_eq,statBlock=p["player_statBlock"])
 
         if p.get("items"):
             player_items = [item_data[0] for item_data in shopItems if item_data[0].name in p["items"]]
             for it in player_items:
-                player_obj.equip_armament(it)
+                player_obj.equip_armament(it, False)
         
         advParty.append(player_obj)
 
@@ -139,25 +149,33 @@ notifications = []
 randEvent = None
 
 item_selection = None
-state = "menu"
+
+hudState = "menu"
+
+gameState = "chooseAction"
 
 player = advParty[0]
 
 hud_states = {
-    "noMagic": ["You have no magic power, and thus cant do a magic attack..."],
+    "noMagic": ["You have", "no magic power,", "and thus cant do a", "magic attack..."],
     "EnemyTurn": ["Enemy Turn..."],
     "party": "",
-    "menu": ["[Shift] Attack", "[A] Magic Attack", "[Ctrl] Use Item"],
     "items": "",
     "attack": ""
 }
 
+targetArrow = 0
+
+
 while running:
-    
+
     partyLenght = len(advParty)
 
-    hud_states["party"] = ["[" + str(i) + "]" + char.name for i,char in enumerate(advParty)]
-    hud_states["attack"] = [" [" + str(index+1) + "] - " + enemy.name for index, enemy in enumerate(enemyList)]
+    hud_states["menu"] = ["Menu","[Shift] Attack", "[S] Skills", "[A] Magic Attack", "[Ctrl] Use Item", "[R] Rest"]
+    hud_states["party"] = [f"[{i+1}] {char.name}" for i, char in enumerate(advParty)]
+    hud_states["attack"] = ["Attack"] + [f"{index+1} - {enemy.name}" for index, enemy in enumerate(enemyList)]
+    hud_states["skills"] = ["Skills"] + ([f"{i+1} - {key}" for i, key in enumerate(player.weapon.skills.keys())] if player.weapon.skills else ["[Empty] - No skills"])
+
 
     menuOptions = [["Continue", "Quit to Desktop"],["Yes", "No"], item_selection, randEvent.actions if randEvent else ""]
 
@@ -166,7 +184,7 @@ while running:
     eventList, lastMenuOpen, lastEvent["bossLevel"] = eventHandling(*eventHandlingArgs)
 
     # Hud Setup
-    drawScreenArgs = [display, hud_states, state, myTurn, advParty, level, lastMenuOpen["Weapons"], enemyList, enemyList_IsSerialized, partyTurn, tabPressed]
+    drawScreenArgs = [display, hud_states, hudState, myTurn, advParty, level, lastMenuOpen["Weapons"], enemyList, enemyList_IsSerialized, partyTurn, tabPressed, targetArrow]
     enemyList_serialized, enemyList_IsSerialized, tabPressed = drawScreen(*drawScreenArgs)
 
     y_offset = 0
@@ -189,15 +207,15 @@ while running:
         "player": player,
         "enemyList": enemyList,
         "toggleMenu": lambda key: toggleDict(eventList, key),
-        "toggleEvent": lambda count: enemyList.insert(0,copy.deepcopy(random.choices(bosses, k=count))) if count != 0 else None,
-        "addNotification": lambda key: addNotification(key, 1)
+        "addBoss": lambda count: [enemyList.insert(0, copy.deepcopy(e)) for e in reversed(random.choices(bosses, k=count))],
+        "addNotification": lambda key: addNotification(key, 2)
     }
 
     # Menu Control
-    menuControlArgs = [myTurn, events, randEvent, eventContext, state, blacksmith, bl_length, eventList, menuOptions, 
+    menuControlArgs = [myTurn, events, randEvent, eventContext, hudState, blacksmith, bl_length, eventList, menuOptions, 
                         selected_id, player, advParty, enemyList_serialized, level, lastMenuOpen["Weapons"], lastMenuOpen["Shop"], 
-                        save_path, running, all_rects]
-    selected_id, running, lastMenuOpen["Weapons"][1], lastMenuOpen["Shop"][1], state = menuControl(*menuControlArgs)
+                        save_path, running, all_rects, targetArrow, len(enemyList)-1]
+    selected_id, running, lastMenuOpen["Weapons"][1], lastMenuOpen["Shop"][1], hudState, targetArrow = menuControl(*menuControlArgs)
 
     # Game input only when menu is not open
     if not any(eventList.values()): 
@@ -206,40 +224,60 @@ while running:
         inputs = {
             "shift": [keys[pygame.K_LSHIFT], shiftPressed], # "nombre": [isActive, wasPressed]
             "a": [keys[pygame.K_a], aPressed], 
+            "s": [keys[pygame.K_s], sPressed], 
+            "r": [keys[pygame.K_r], rPressed], 
             "ctrl": [keys[pygame.K_LCTRL], ctrlPressed],
             "tab": [keys[pygame.K_TAB], tabPressed]
         }
 
         # Registrar teclas necesarias según contexto
-        max_index = max(len(enemyList), len(player.items))
+        max_index = max(len(enemyList), len(player.items), partyLenght)
         for i in range(1, max_index+1):
             key_attr = getattr(pygame, f"K_{i}")
             inputs[str(i)] = keys[key_attr]
             
 
-        if myTurn and partyTurn < len(advParty):
+        if myTurn:
             player = advParty[partyTurn]  # jugador actual
             randEvent, eventList, lastEvent = getRandEvent(eventList,lastEvent,randEvent,player)
 
-            hud_states["items"] = [item.name + " - " + str(item.uses) for item in player.items] if player.items else ["[Empty] - No items"]
-
+            hud_states["items"] = ["Items"] + [f"[{i+1}] {item.name} - {item.uses}" for i,item in enumerate(player.items)] if player.items else ["[Empty] - No items"]
+            
             match inputs:
                 case {"shift": [active, pressed]} if pressed or active:
+
                     enemy_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(enemyList))}
                     for key, pressed in enemy_keys.items():
                         if pressed:
                             enemy_idx = int(key) - 1
                             player.weapon.melee_attack(enemyList[enemy_idx], False)
                             partyTurn, myTurn = passTurn(partyTurn)
-                            state = "menu"
+                            hudState = "menu"
                             shiftPressed = False
                             break
                     if keys[pygame.K_b]:
                         shiftPressed = False
                     if active:
                         shiftPressed = True
+                
+                case {"s": [active, pressed]} if pressed or active:
+
+                    skill_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(player.weapon.skills))}
+                    for key, pressed in skill_keys.items():
+                        if pressed:
+                            skill_idx = int(key) - 1
+                            key = list(player.weapon.skills.keys())[skill_idx]
+                            player.weapon.skills[key](player,enemyList[targetArrow])
+                            hudState = "menu"
+                            sPressed = False
+                            break
+                    if keys[pygame.K_b]:
+                        sPressed = False
+                    if active:
+                        sPressed = True
 
                 case {"a": [active, pressed]} if pressed or active:
+
                     if getattr(player.weapon, "magic_dmg", 0) > 0 and player.mp >= 10:
                         enemy_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(enemyList))}
                         for key, pressed in enemy_keys.items():
@@ -247,37 +285,48 @@ while running:
                                 enemy_idx = int(key) - 1
                                 player.weapon.cast_spell(enemyList[enemy_idx])
                                 partyTurn, myTurn = passTurn(partyTurn)
-                                state = "menu"
+                                hudState = "menu"
                                 break
                         if keys[pygame.K_b]:
                             aPressed = False
                         if active:
                             aPressed = True
                     else:
-                        state = "noMagic"
+                        hudState = "noMagic"
 
                 case {"ctrl": [active, pressed]} if pressed or active:
+                    
                     item_keys = {str(i+1): inputs.get(str(i+1), False) for i in range(len(player.items))}
                     for key, pressed in item_keys.items():
                         if pressed:
                             key_id = int(key) - 1
-                            player.useItem(key_id)
+                            player.useItem(key_id) 
                             ctrlPressed = False
                             partyTurn, myTurn = passTurn(partyTurn)
-                            state = "menu"
+                            hudState = "menu"
                             break
+
                     if keys[pygame.K_b]:
                         ctrlPressed = False
                     if active:
                         ctrlPressed = True
                 
                 case {"tab": [active, pressed]} if pressed or active:
+
                     if keys[pygame.K_b]:
                         tabPressed = False
                     if active:
                         tabPressed = True
                     else:
                         tabPressed = False
+                
+                case {"r": [active, pressed]} if pressed or active:
+                    
+                    if keys[pygame.K_b]:
+                        tabPressed = False
+                    player.sta += round(player.max_sta*0.15)
+                    partyTurn, myTurn = passTurn(partyTurn)
+                    hudState = "menu"
 
             if advParty[partyTurn] != player or not myTurn:
                 for e in enemyList:
@@ -287,9 +336,10 @@ while running:
 
             
         elif not myTurn:
-
+            
+            targetArrow = 0
             for key in lastEvent.keys(): lastEvent[key] = False
-            state = "EnemyTurn"
+            hudState = "EnemyTurn"
 
             if enemy_turn_start is None:
                 enemy_turn_start = pygame.time.get_ticks()  # registramos cuándo empezó el turno enemigo
@@ -317,11 +367,11 @@ while running:
                                 "enemyList": enemyList
                             }
                             enemy.skills[skill_name](**context)
-                            addNotification(f"{enemy.name} uses {skill_name}!",1)
+                            addNotification(f"{enemy.name} uses {skill_name}!",2)
                             print(f"{enemy.name} uses {skill_name}!")
                     else:
                         enemy.attack(target, False)    
-                        addNotification(f"{enemy.name} attacks, dealing {enemy.dmg}dmg!",1)
+                        addNotification(f"{enemy.name} attacks, dealing {enemy.dmg}dmg!",2)
                         print(f"{enemy.name} attacks! {enemy.dmg} {target.armor.dmg_red} {enemy.dmg*target.armor.dmg_red}")
 
                     for attr, ote_list in enemy.hooks.items():
@@ -330,7 +380,7 @@ while running:
 
                 print("-----------------------------")
                 myTurn = True
-                state = "menu"
+                hudState = "menu"
                 enemy_turn_start = None  # reiniciamos el temporizador
 
                 
@@ -356,6 +406,7 @@ while running:
             for enemy in enemyList:
                 enemy.hp = enemy.base_hp + level
     else:
+
         match eventList:
             case {"Pause": True}:
                 drawPauseMenu(display, menuOptions[0], selected_id)
@@ -374,9 +425,11 @@ while running:
     advParty = [p for p in advParty if p._hp > 0]
 
     if advParty == []:
-    print("El juego ha terminado: el jugador perdió.")
+        print("El juego ha terminado: el jugador perdió.")
 
-    if os.path.exists(save_path):
-        os.remove(save_path)
+        if os.path.exists(save_path):
+            os.remove(save_path)
 
-    running = False
+        running = False
+
+
