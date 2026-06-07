@@ -1,24 +1,8 @@
 import pygame, random, copy
 from vault.events import badEvents,neutralEvents,goodEvents
 
-
-def eventHandling(display, level, my_turn, lastMenuOpened, lastEvent, menu_list): 
-    isBossLevel = False
-    lastMenuOpened["Weapons"][1] = (lastMenuOpened["Weapons"][0] == level)
-    lastMenuOpened["Shop"][1] = (lastMenuOpened["Shop"][0] == level)
-
-    if not menu_list["Weapons"] and level % 5 == 0 and level % 10 != 0 and not lastMenuOpened["Weapons"][1]:
-        menu_list["Weapons"] = True
-        lastMenuOpened["Weapons"][0] = level
-        
-    if not menu_list["Shop"] and level % 5 == 0 and level % 2 == 0 and not lastMenuOpened["Shop"][1]:
-        menu_list["Shop"] = True
-        lastMenuOpened["Shop"][0] = level
-
-    if level % 10 == 0 and level % 2 == 0 and level != 0:
-        isBossLevel = True
-
-    return menu_list, lastMenuOpened, isBossLevel
+def gameStateChange(inputs, gameState, targets, action):
+    return targets, gameState, action, inputs, True
 
 def drawRandomEvent(display, event, selected_idx):
     overlay = pygame.Surface(display[0].get_size(), pygame.SRCALPHA)
@@ -85,17 +69,11 @@ def drawRandomEvent(display, event, selected_idx):
         opt_rect = opt_surf.get_rect(center=(center_x, start_y + i * line_h))
         display[0].blit(opt_surf, opt_rect)
 
-
-
-
-def pickNewEnemies(count, enemyList, enemies, bosses, level, isBossLevel):
+def pickNewEnemies(count, enemyList, enemies, bosses, level):
 
     enemyList = [copy.deepcopy(enemy) for enemy in random.choices(enemies, k=count)]
     for i, enemy in enumerate(enemyList):
         enemy.hp = enemy.base_hp + level    
-
-    if isBossLevel:
-        enemyList.insert(0, copy.deepcopy(random.choice(bosses)))
 
     return enemyList
 
@@ -103,7 +81,7 @@ def getRandEvent(eventList, lastEvent, event_choice, player):
     
     if not lastEvent["randEvent"]:
 
-        event_chance = random.randint(1,20)
+        event_chance = 100
         print(event_chance , eventList["randEvent"])
         if event_chance <= 5 + ((player.statBlock[4] // 2) - 4):
 
