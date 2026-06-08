@@ -11,20 +11,14 @@ class dmgType(IntFlag):
     THUNDER = auto()
     SHADOW = auto()
     ILLUSORY = auto()
-
-    def unstableCombination(self):
-        for comb in UNSTABLE_COMBS:
-            if (self & comb) == comb:
-                return True
-        return False
+    SPACE = auto()
+    HOLY = auto()
 
     def addElem(self, element):
         return self | element
     
     def rmElem(self, element):
         return self & ~element
-
-UNSTABLE_COMBS = [dmgType.FIRE | dmgType.ICE, dmgType.PHYSICAL | dmgType.ILLUSORY]
 
 class Spell:
     def __init__(self, runes):
