@@ -1,7 +1,7 @@
 import pygame, json, copy, random
-from random import randint, choices
 from vault.events import Event
 from funcionalidades.combat_n_entities.entities import Player
+from funcionalidades.menus_n_hud.hudHandling import drawAdvParty
 from funcionalidades.Utility.information import addHover
 
 def shopControl(events, selected_id, player, shopIsOpen, shopItems, running):

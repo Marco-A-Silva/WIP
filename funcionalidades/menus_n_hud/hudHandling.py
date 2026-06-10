@@ -149,9 +149,10 @@ def drawAdvParty(char, display, i, last_pmember, length, partyTurn, myTurn, tabP
 
     width_px, height_px = display[1][0].size(char.name + "  ")
     last_pmember = max(240, width_px + 20)
-    pygame.draw.rect(display[0], (50,50,50), (length, 0, last_pmember, 130), border_radius=10)
-    pygame.draw.rect(display[0], (200,200,255), (length, 0, last_pmember, 130), 2, border_radius=10)
+    pygame.draw.rect(display[0], (50,50,50), (length, 0, length + 240, 130), border_radius=10)
+    pygame.draw.rect(display[0], (200,200,255), (length, 0, length + 240, 130), 2, border_radius=10)
     drawStatEffs(char,display,last_pmember)
+    print(length, last_pmember)
 
     if tabPressed:
         drawAdvStats(char,display,last_pmember, 105, length, i, partyTurn, myTurn)
@@ -224,9 +225,6 @@ def draw_bar(surface, x, y, width, height, current, max_, state_dict, key, color
 
 def drawScreen(display, action, stateOptions, actionStates, states, state, my_turn, advParty, floor, level,
                enemies_list, enemies_list_is_serialized, partyTurn, tabPressed):
-
-    global counter
-    counter = (counter + 1) % 80
 
     enemies_list_serialized = None
     

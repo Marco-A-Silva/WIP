@@ -51,11 +51,7 @@ class Weapon:
     def useSkill(self, index, target):
         self.skills[index](self,target)
         
-    def attack(self, target, ignore: int = 0):
-        cost = 8 * self.weight
-        if self.owner.sta < cost:
-            return
-
+    def attack(self, target, ignore: int = 0, cost = 8):
         self.owner.sta -= cost
         dmg = self.calc_damage(self.base_dmg)
         ctx = {
@@ -119,9 +115,7 @@ class RangedWeapon(Weapon):
         cost = 4*self.weight
         if self.ammo >= self.ammoReq and self.owner.sta >= cost:
             self.ammo -= self.ammoReq
-            self.owner.sta -= cost
-            dmg = self.calc_damage(self.base_dmg)
-            target.take_damage(dmg, ignore)
+            super().attack(target, ignore, cost)
 
 class SecondaryWeapon(Weapon):
     def __init__(self, name, dmg_red, dmg, weight: float = 1.0, skills = None, passives = None, type: list = ["secondary"],twoHand = False, stats = None):

@@ -1,5 +1,8 @@
 import pygame, json, random, os, sys, time
 from pytmx.util_pygame import load_pygame
+from funcionalidades import combatState
+
+from funcionalidades import combatState, combatManager, combatRenderer, State
 
 #Import drawing functions
 from funcionalidades import drawPauseMenu, drawShopMenu, drawScreen, drawChestMenu, drawRandomEvent, drawLayout, drawLevelUpMenu, drawEventMenu, drawExtraMenu, drawHub, drawNotifications
@@ -87,6 +90,7 @@ randEvent = None
 
 floorLayout = initializeFloorLayout(floor)
 activeFloor = ""
+floorLoaded = False
 
 extraOptions = [["sleep","guard","eat"],["delve in the intricacies of magic","leave"],["train","leave"]]
 shopPool = None
@@ -164,7 +168,7 @@ input_lock = False
 myTurn = True
 enemy_turn_start = None
 running = True
-
+instance = None
 #-----------------------------------------------------------------------------------------------------------
 
 while running:
@@ -179,7 +183,7 @@ while running:
         if mouse_hidden:
             pygame.mouse.set_visible(True)
             mouse_hidden = False
-    
+
 
     for key in ["shop","chest","event","extra"]:
         eventList[key] = True if key in activeFloor else False
@@ -321,7 +325,6 @@ while running:
         case "game": 
 
             match activeFloor:
-
                 case _ if activeFloor.startswith("extra_"):
                     
                     extra_floor = activeFloor[6:]
@@ -331,7 +334,7 @@ while running:
                     if eventList["extra"]:
                         drawExtraMenu(extra_floor, display, player, selected_id, extraOptions)
                     else: floorLayout, floor, room, activeFloor, appState, notifications = loadNewRoom(floor, maxRoom,room,floorLayout,"roomTransition")
-
+                
                 case "event":
 
                     if not staticEvent and eventList["event"]:
@@ -380,7 +383,29 @@ while running:
                 
                 case "fight" | "elite":
 
-                    if not enemyList and pending_levels == 0:
+                    if not floorLoaded:
+                        instance = combatState(display, advParty, enemyList, myTurn, room, floor, activeFloor, pending_levels, addNotification)
+                        floorLoaded = True
+
+                    for e in events:
+                        if e.type == pygame.QUIT:
+                            running = False
+                        resultado_combate = instance.handle_event(e) 
+
+                    instance.update()
+                    instance.render()
+                    drawLayout(display, visual_level, floorLayout, room, floor)
+                    drawNotifications(display)
+
+                    if not instance.ongoing:
+                        if instance.result == "VICTORY":
+                            floorLayout, floor, room, activeFloor, appState, notifications = loadNewRoom(floor, maxRoom, room, floorLayout, "roomTransition")
+                            myTurn = True
+                            floorLoaded = False
+                            enemyList = []
+                        else: running = False 
+
+                    """if not enemyList and pending_levels == 0:
                         enemyList = pickNewEnemies(random.randint(1,3),enemyList,enemies,bosses,room)
                         if activeFloor == "elite":
                             boss_count = random.choices([1, 2], weights=[90, 10], k=1)[0]
@@ -656,7 +681,7 @@ while running:
             if advParty == []:
                 print("El juego ha terminado: el jugador perdió.")
 
-                running = False
+                running = False"""
 
     pygame.display.flip()
     clock.tick(120)

@@ -1,11 +1,12 @@
-from .entities import Enemy
+from funcionalidades.combat_n_entities.entities import Enemy
 
-class BattleManager:
+class combatManager:
     
-    def __init__(self, party, enemies, notiFunc=None):
+    def __init__(self, party, enemies, notiFunc=None, visualCallback = None):
         self.party = party
         self.enemies = enemies
-        self.notify = add_notiFunc
+        self.notify = notiFunc
+        self.trigger_visual = visualCallback
 
     def _update(self):
         self.enemies[:] = [e for e in self.enemies if e.hp > 0]
@@ -18,10 +19,18 @@ class BattleManager:
             
         return "CONTINUE"
 
-    def melee(self, caster, weapon, target, ignore=False):
+    def melee(self, caster, weapon, target, ignore=0):
+
+        hp_antes = target.hp
         weapon.attack(target, ignore)
+        danio_real = hp_antes - target.hp
+
         if self.notify:
             self.notify(f"{caster.name} attacked {target.name}!", 1.5)
+
+        if self.trigger_visual and danio_real > 0:
+            self.trigger_visual(target, int(danio_real))
+
         return self._update()
     
     def cast(self, caster, weapon, spell, target = None):
@@ -44,5 +53,13 @@ class BattleManager:
         for tar in targets:
             finalDmg = caster.statBlock[2]*1.5 + spell.effect.get("baseDmg", 0) + spell.effects.get("bonusDmg",0)
             
+        if spell.effects.get("poison", False):
+            return
+        
+        if spell.effects.get("stun", True):
+            return
+        
+        if spell.effects.get("lifesteal", False):
+            return
 
         return self._update()
