@@ -69,6 +69,88 @@ class TextoFlotante:
         superficie_texto.set_alpha(max(0, self.alpha))
         surface.blit(superficie_texto, (self.x, self.y))
 
+
+class gameRenderer:
+    def __init__(self, display):
+        self.display = display 
+        """colore = (255, 0, 255)
+        fonts = [pygame.font.SysFont("Arial", 30),pygame.font.SysFont("Arial", 20),pygame.font.SysFont("Arial", 15)]
+        display = [screen, fonts, colore]"""
+
+    def render(self, floor_layout, room, floor):
+        layout_sprites = []
+
+        ICON_SIZE = 32
+        SPACING = 40
+        Y = 20
+
+        font = self.display[1][1]
+        tooltip_font = self.display[1][2]
+
+        mouse_pos = pygame.mouse.get_pos()
+
+        total = len(floor_layout)
+        if total == 0:
+            return
+
+        texto = self.display[1][0].render(str(floor) + "-" + str(room + 1), True, (255, 255, 255))   
+        self.display[0].blit(texto, (self.display[0].get_width() - texto.get_width() - 6, 8))
+
+        screen_center_x = self.display[0].get_width() // 2
+        total_width = (total - 1) * SPACING
+        START_X = screen_center_x - total_width // 2
+
+        # --- cargar sprites ---
+        for floor in floor_layout:
+            if floor.startswith("extra_"):
+                floor = floor[6:]
+
+            try:
+                sprite = pygame.image.load(f"assets/tiles/{floor}.png").convert_alpha()
+            except FileNotFoundError:
+                print(f"[WARN] Falta tile: {floor}")
+                continue
+
+            sprite = pygame.transform.scale(sprite, (ICON_SIZE, ICON_SIZE))
+            layout_sprites.append(sprite)
+
+        # --- dibujar ---
+        for i, sprite in enumerate(layout_sprites):
+            x = START_X + SPACING * i
+            sprite_rect = sprite.get_rect(center=(x, Y))
+            hovering = sprite_rect.collidepoint(mouse_pos)
+
+            pygame.draw.rect(
+                self.display[0],
+                (200, 200, 255) if i == room else (0, 0, 0),
+                sprite_rect,
+                2,
+                border_radius=6
+            )
+
+            self.display[0].blit(sprite, sprite_rect)
+
+            # --- tooltip debajo ---
+            if hovering:
+                text = tooltip_font.render(floor_layout[i][6:] if floor_layout[i].startswith("extra_") else floor_layout[i], True, (255, 255, 255))
+                pad = 4
+
+                text_rect = text.get_rect(
+                    midtop=(sprite_rect.centerx, sprite_rect.bottom + 6)
+                )
+                bg_rect = text_rect.inflate(pad * 2, pad * 2)
+
+                pygame.draw.rect(self.display[0], (20, 20, 30), bg_rect, border_radius=6)
+                pygame.draw.rect(self.display[0], (200, 200, 255), bg_rect, 1, border_radius=6)
+                display[0].blit(text, text_rect)
+
+            # --- guion ---
+            if i < total - 1:
+                dash = font.render("-", True, (200, 200, 255))
+                dash_rect = dash.get_rect(center=(x + SPACING // 2, Y))
+                self.display[0].blit(dash, dash_rect)
+
+
 class combatRenderer:
     def __init__(self, display):
         self.display = display 

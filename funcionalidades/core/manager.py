@@ -1,4 +1,53 @@
+import random
 from funcionalidades.combat_n_entities.entities import Enemy
+
+class gameManager:
+    def __init__(self, room=0, floor=1, floor_layout=None):
+        self.room = room
+        self.floor = floor
+
+        if floor_layout is None:
+            self.floor_layout = self._init_floor_layout(self.floor)
+        else:
+            self.floor_layout = floor_layout
+            self.max_rooms = len(self.floor_layout)
+            
+        self.active_floor = self.floor_layout[self.room]
+
+    def _init_floor_layout(self, floor):
+        layout = random.choices(MAIN_ROOMS,k=ROOMS_PER_FLOOR,weights=MAIN_ODDS)
+
+        for i,room in enumerate(layout):
+            if room == "extra":
+                layout[i] = "extra_" + random.choices(EXTRA_ROOMS, k=1, weights=EXTRA_ODDS)[0]
+
+        if floor % 10 == 0:
+            layout.append("elite")
+        else: layout.append("shop")
+        
+        self.max_rooms = len(layout)
+
+    def load_new_room(self):
+        self.room += 1
+        if self.room >= self.max_rooms:
+            self.floor += 1
+            self.floor_layout = self._init_floor_layout(self.floor)
+            self.room = 0
+            
+        self.active_floor = self.floor_layout[self.room]
+
+    def add_room(self, key, i):
+        self.floor_layout.insert(i, key)
+        self.max_rooms += 1
+
+    def rm_room(self, key):
+        if key in self.floor_layout:
+            self.floor_layout.remove(key)
+            self.max_rooms -= 1
+
+    def rm_rooms(self, key):
+        self.floor_layout = [r for r in self.floor_layout if r != key]
+        self.max_rooms = len(self.floor_layout)
 
 class combatManager:
     

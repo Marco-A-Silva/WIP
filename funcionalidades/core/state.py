@@ -1,20 +1,55 @@
 import pygame, random, copy
-from .view import TextoFlotante, combatRenderer
-from .manager import combatManager
+from .view import TextoFlotante, gameRenderer, combatRenderer
+from .manager import gameManager, combatManager
 from vault.enemies import enemies, bosses
 from funcionalidades.Utility import addNotification
+
+MAIN_ROOMS = ["fight","chest","shop","event","extra"]
+MAIN_ODDS = [55,12,6,22,5]
+EXTRA_ROOMS = ["dojo","rest site","school of magic"]
+EXTRA_ODDS = [1,3,1]
+
+ROOMS_PER_FLOOR = 9
+
 
 class State:
     def __init__(self, display):
         self.display = display
 
     def handle_event(self, event):
-        passc
+        pass
 
     def update(self):
-        return
+        pass
+
+    def render(self):
+        pass
+
+
+class gameState(State):
+    def __init__(self, display, adv_party, room=0, floor=1, floor_layout=None):
+        super().__init__(display)
+
+        self.manager = gameManager(room, floor, floor_layout)
+        self.renderer = gameRenderer(self.display)
+
+    def handle_event(self, event):
+        pass
+
+    def update(self):
+        pass
+
+    def render(self):
+        self.renderer.render(
+            self.manager.floor_layout,
+            self.manager.room,
+            self.manager.floor
+        )  
+
 
 class combatState(State):
+
+
     def __init__(self, display, party, enemiesS, my_turn, room, floor, activeFloor, pending_levels, addNotification):
         super().__init__(display)
         self.selected_index = 0
@@ -86,12 +121,12 @@ class combatState(State):
                     "execute": lambda target, sk=nombre_skill: personaje_actual.skills[sk](personaje_actual, target, "primary")
                 })
 
+
     def handle_event(self, event):
         """Procesa las entradas del teclado de forma centralizada."""
         if event.type != pygame.KEYDOWN:
             return
 
-        # Navegación universal de botones
         if event.key == pygame.K_UP:
             self.selected_index = max(0, self.selected_index - 1)
         elif event.key == pygame.K_DOWN:
@@ -105,28 +140,25 @@ class combatState(State):
                 self.menu_opt_update()
 
         elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
-            self.process_selection()
-
-    def process_selection(self):
-        """Aplica la lógica cuando el jugador presiona Enter en una opción."""
-        if self.sub_state in ["SELECT_ACTION", "SELECT_SKILL"]:
-            opcion = self.menu_options[self.selected_index]
-            
-            if opcion["type"] == "CHOOSE_SKILL":
-                self.sub_state = "SELECT_SKILL"
-                self.selected_index = 0
-                self.menu_opt_update()
+            if self.sub_state in ["SELECT_ACTION", "SELECT_SKILL"]:
+                opcion = self.menu_options[self.selected_index]
                 
-            elif opcion["type"] == "REQUIRES_TARGET":
-                self.current_action = opcion
-                self.sub_state = "SELECT_TARGET"
-                self.selected_index = 0 
+                if opcion["type"] == "CHOOSE_SKILL":
+                    self.sub_state = "SELECT_SKILL"
+                    self.selected_index = 0
+                    self.menu_opt_update()
+                    
+                elif opcion["type"] == "REQUIRES_TARGET":
+                    self.current_action = opcion
+                    self.sub_state = "SELECT_TARGET"
+                    self.selected_index = 0 
 
-        elif self.sub_state == "SELECT_TARGET":
-            enemigo_objetivo = self.enemies[self.selected_index]
-            result = self.current_action["execute"](enemigo_objetivo)
+            elif self.sub_state == "SELECT_TARGET":
+                enemigo_objetivo = self.enemies[self.selected_index]
+                result = self.current_action["execute"](enemigo_objetivo)
 
-            self.combat_flow(result)
+                self.combat_flow(result)
+
 
     def combat_flow(self, result):
         """Decide qué pasa después de que una acción alteró los números del juego."""
@@ -141,10 +173,12 @@ class combatState(State):
         self.next_turn()
         self.menu_opt_update()
 
+
     def next_turn(self):
         self.party_turn += 1
         if self.party_turn >= len(self.party):
             self.party_turn = 0
+
 
     def render(self):
         self.renderer.render(
@@ -159,6 +193,7 @@ class combatState(State):
             active_effs=self.active_effs
         )
 
+
     def _generate_enemies(self, count, enemies, bosses, level, floor, activeFloor):
 
         enemyList = [copy.deepcopy(enemy) for enemy in random.choices(enemies, k=count)]
@@ -171,6 +206,7 @@ class combatState(State):
             enemyList.append(bosses_picked)
 
         return enemyList
+
 
     def crear_texto_flotante(self, objetivo, cantidad):
         """Calcula dónde está el personaje y genera el efecto visual."""
@@ -191,6 +227,7 @@ class combatState(State):
         nuevo_texto = TextoFlotante(cantidad, x, y, color=(255, 50, 50))
         self.active_effs.append(nuevo_texto)
 
+
     def update(self):
         """El motor del tiempo de tu estado."""
         # 1. Hacemos que cada efecto mueva sus propias variables
@@ -200,30 +237,36 @@ class combatState(State):
         # 2. Limpieza: Dejamos vivos solo los que aún no se volvieron 100% transparentes
         self.active_effs = [e for e in self.active_effs if e.alpha > 0]
 
+
 class shopState(State):
     def __init__(self, display):
         super().__init__(display)
         self.selected_index = 0
+
 
 class eventState(State):
     def __init__(self, display):
         super().__init__(display)
         self.selected_index = 0
 
+
 class chestState(State):
     def __init__(self, display):
         super().__init__(display)
         self.selected_index = 0
+
 
 class lvlUpState(State):
     def __init__(self, display):
         super().__init__(display)
         self.selected_index = 0
 
+
 class extraState(State):
     def __init__(self, display):
         super().__init__(display)
         self.selected_index = 0
+
 
 class hubState(State):
     def __init__(self, display):
