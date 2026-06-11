@@ -2,7 +2,8 @@ import pygame, json, random, os, sys, time
 from pytmx.util_pygame import load_pygame
 from funcionalidades import combatState
 
-from funcionalidades import combatState, combatManager, combatRenderer, State
+from funcionalidades import combatState, combatManager, combatRenderer
+from funcionalidades import gameManager, gameRenderer, gameState
 
 #Import drawing functions
 from funcionalidades import drawPauseMenu, drawShopMenu, drawScreen, drawChestMenu, drawRandomEvent, drawLayout, drawLevelUpMenu, drawEventMenu, drawExtraMenu, drawHub, drawNotifications
@@ -168,7 +169,7 @@ input_lock = False
 myTurn = True
 enemy_turn_start = None
 running = True
-instance = None
+instance = gameState(display, advParty)
 #-----------------------------------------------------------------------------------------------------------
 
 while running:
@@ -229,8 +230,8 @@ while running:
             transition_alpha += transition_speed
 
             if transition_alpha >= 255:
-                advParty, enemyList, room, activeFloor, visual_level = load_game_state(save_path, floorLayout)
-                print(activeFloor, visual_level)
+                partida_party, enemyList, room, activeFloor, visual_level = load_game_state(save_path, floorLayout)
+                advParty[:] = partida_party
                 player = advParty[0]
                 appState = "game"
                 transition_alpha = 0
@@ -243,8 +244,8 @@ while running:
             transition_alpha += transition_speed
 
             if transition_alpha >= 255:
-                advParty, enemyList, room, activeFloor, visual_level = load_game_state(save_path, floorLayout)
-                print(activeFloor, visual_level)
+                partida_party, enemyList, room, activeFloor, visual_level = load_game_state(save_path, floorLayout)
+                advParty[:] = partida_party
                 player = advParty[0]
                 appState = "hub"
                 transition_alpha = 0

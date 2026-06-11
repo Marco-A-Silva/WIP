@@ -8,4 +8,5 @@ from .menus_n_hud.hudHandling import drawScreen, drawLayout
 from .Utility import drawNotifications, addNotification, initializeFloorLayout, addHover, drawHub, getCollisions, addRoom, removeRoom, loadNewRoom, OverTimeEffects, modifyAttrs
 
 from .core import EnemyAi, Attack, UseSkill
-from .core import combatManager, combatRenderer, combatState, State
+from .core import combatManager, combatRenderer, combatState
+from .core import gameManager, gameRenderer, gameState

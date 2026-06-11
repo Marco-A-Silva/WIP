@@ -1,8 +1,8 @@
-import pygame, random, copy
+import pygame, random, copy, os
 from .view import TextoFlotante, gameRenderer, combatRenderer
 from .manager import gameManager, combatManager
 from vault.enemies import enemies, bosses
-from funcionalidades.Utility import addNotification
+from funcionalidades.Utility import addNotification, load_game_state
 
 MAIN_ROOMS = ["fight","chest","shop","event","extra"]
 MAIN_ODDS = [55,12,6,22,5]
@@ -15,6 +15,7 @@ ROOMS_PER_FLOOR = 9
 class State:
     def __init__(self, display):
         self.display = display
+        self.is_done = False
 
     def handle_event(self, event):
         pass
@@ -26,38 +27,124 @@ class State:
         pass
 
 
-class gameState(State):
-    def __init__(self, display, adv_party, room=0, floor=1, floor_layout=None):
+class menuState(State):
+    def __init__(self, display, options):
         super().__init__(display)
+        self.options = options
+        self.selected_index = 0
+
+    def handle_event(self, event):
+        if event != pygame.KEYDOWN:
+            return
+
+        if event.key in [pygame.K_UP, pygame.K_w]:
+            self.selected_index = max(0, self.selected_index - 1)
+        elif event.key in [pygame.K_DOWN, pygame.K_s]:
+            self.selected_index = min (len(self.options) - 1, self.selected_index + 1)
+
+
+class gameState(State):
+    def __init__(self, display, save_path):
+        super().__init__(display)
+        self.sub_state = hubState(self.display)
+        self.menu = None
 
         self.manager = gameManager(room, floor, floor_layout)
         self.renderer = gameRenderer(self.display)
 
+        if os.path.exists(save_path):
+            datos = load_game_state(save_path) 
+            
+            self.adv_party = datos["party"]
+            self.enemies = datos["enemies"]
+            self.room = datos["room"]
+            self.floor = 1
+            self.floor_layout = self._init_floor_layout(self.floor)
+        else:
+            self.room = 0
+            self.floor = 1
+            self.floor_layout = self._init_floor_layout(self.floor)
+            self.adv_party = []
+
+
     def handle_event(self, event):
-        pass
+        if event != pygame.KEYDOWN:
+            return
+
+        if event.key == pygame.K_ESCAPE:
+            self.menu_activo = pauseState(self.display)
+            return
+
+        if event.key == pygame.K_F5:
+            self.guardar_progreso()
+            return
+        
+        if self.sub_state:
+            self.sub_state.handle_event(event)
+
 
     def update(self):
+        if self.menu_activo is not None:
+            self.menu_activo.update()
+            
+            if self.menu_activo.is_done:
+                self.menu_activo = None
+
+        if self.sub_state is None:
+            self.load_new_room()
+            return
+        
+        self.sub_state.update()
+
+        if self.sub_state.is_done:
+            if hasattr(self.sub_state, 'result') and self.sub_state.result == "GAME_OVER":
+                self.result = "GAME_OVER"
+                self.is_done = True
+                return
+
+            self.sub_state = None
+            self.load_new_room()
+
+
+    def load_new_room(self):
+        self.manager.load_new_room()
+        tipo_sala = self.manager.active_floor
+
+        if tipo_sala == "fight":
+            self.sub_state = combatState(self.display, self.manager.party, [], True, self.manager.room, self.manager.floor, self.manager.active_floor, addNotification) 
+        elif tipo_sala == "chest":
+            self.sub_state = chestState(self.display)
+        elif tipo_sala == "shop":
+            self.sub_state = shopState(self.display)
+
+
+    def guardar_progreso(self):
         pass
 
+
     def render(self):
+        if self.sub_state is not None:
+            self.sub_state.render()
+
         self.renderer.render(
             self.manager.floor_layout,
             self.manager.room,
             self.manager.floor
         )  
 
+        if self.menu_activo is not None:
+            self.menu_activo.render()
+
 
 class combatState(State):
 
 
-    def __init__(self, display, party, enemiesS, my_turn, room, floor, activeFloor, pending_levels, addNotification):
+    def __init__(self, display, party, enemiesS, my_turn, room, floor, activeFloor, addNotification):
         super().__init__(display)
         self.selected_index = 0
-        self.ongoing = True
-        self.result = ""
 
         self.party = party
-        self.enemies = enemiesS if enemiesS != [] and pending_levels == 0 else self._generate_enemies(random.randint(1,3), enemies, bosses, room, floor, activeFloor)
+        self.enemies = enemiesS if enemiesS != [] else self._generate_enemies(random.randint(1,3), enemies, bosses, room, floor, activeFloor)
         self.my_turn = my_turn
         self.party_turn = 0
 
@@ -164,7 +251,7 @@ class combatState(State):
         """Decide qué pasa después de que una acción alteró los números del juego."""
         if result != "CONTINUE":
             self.ongoing = False
-            self.result = result
+            return
 
         self.sub_state = "SELECT_ACTION"
         self.selected_index = 0
@@ -256,12 +343,6 @@ class chestState(State):
         self.selected_index = 0
 
 
-class lvlUpState(State):
-    def __init__(self, display):
-        super().__init__(display)
-        self.selected_index = 0
-
-
 class extraState(State):
     def __init__(self, display):
         super().__init__(display)
@@ -271,3 +352,9 @@ class extraState(State):
 class hubState(State):
     def __init__(self, display):
         super().__init__(display)
+
+
+class lvlUpState(State):
+    def __init__(self, display):
+        super().__init__(display)
+        self.selected_index = 0

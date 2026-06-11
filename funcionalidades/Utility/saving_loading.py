@@ -132,7 +132,7 @@ def create_initial_save(race_name, save_path):
     with open(save_path, "w") as f:
         json.dump(data, f, indent=4)
 
-def load_game_state(save_path, floorLayout):\
+def load_game_state(save_path):
 
     from funcionalidades.combat_n_entities.entities import Player, Enemy
 
@@ -272,7 +272,7 @@ def load_game_state(save_path, floorLayout):\
 
         advParty.append(player)
 
-    return advParty, enemyList, room, floorLayout[room-1], room
+    return {"party": advParty, "enemies":enemyList, "room":room}
 
 def generate_statblock(class_name):
     apt = CLASS_APTITUDES[class_name]
