@@ -1,7 +1,4 @@
 import json, pygame, copy
-from funcionalidades.combat_n_entities.combat_items import (
-    Weapon, MagicWeapon, RangedWeapon, SecondaryWeapon, Armor
-)
 from vault import shopItems, enemySkills, magicSkills, meleeSkills
 
 
@@ -133,7 +130,10 @@ def create_initial_save(race_name, save_path):
         json.dump(data, f, indent=4)
 
 def load_game_state(save_path):
-
+    
+    from funcionalidades.combat_n_entities.combat_items import (
+        Weapon, MagicWeapon, RangedWeapon, SecondaryWeapon, Armor
+    )
     from funcionalidades.combat_n_entities.entities import Player, Enemy
 
     with open(save_path, "r") as f:

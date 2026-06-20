@@ -1,5 +1,13 @@
 import random
+from vault.enemies import enemies, bosses
 from funcionalidades.combat_n_entities.entities import Enemy
+
+MAIN_ROOMS = ["fight","chest","shop","event","extra"]
+MAIN_ODDS = [55,12,6,22,5]
+EXTRA_ROOMS = ["dojo","rest site","school of magic"]
+EXTRA_ODDS = [1,3,1]
+
+ROOMS_PER_FLOOR = 9
 
 class gameManager:
     def __init__(self, room=0, floor=1, floor_layout=None):
@@ -7,11 +15,11 @@ class gameManager:
         self.floor = floor
 
         if floor_layout is None:
-            self.floor_layout = self._init_floor_layout(self.floor)
+            self._init_floor_layout(self.floor)
         else:
             self.floor_layout = floor_layout
-            self.max_rooms = len(self.floor_layout)
-            
+        
+        self.max_rooms = len(self.floor_layout)
         self.active_floor = self.floor_layout[self.room]
 
     def _init_floor_layout(self, floor):
@@ -24,14 +32,18 @@ class gameManager:
         if floor % 10 == 0:
             layout.append("elite")
         else: layout.append("shop")
+
+        layout.insert(1, "shop")
         
         self.max_rooms = len(layout)
+        self.floor_layout = layout
+
 
     def load_new_room(self):
         self.room += 1
         if self.room >= self.max_rooms:
             self.floor += 1
-            self.floor_layout = self._init_floor_layout(self.floor)
+            self._init_floor_layout(self.floor)
             self.room = 0
             
         self.active_floor = self.floor_layout[self.room]
@@ -51,21 +63,47 @@ class gameManager:
 
 class combatManager:
     
-    def __init__(self, party, enemies, notiFunc=None, visualCallback = None):
+    def __init__(self, party, enemiess, my_turn, room, floor, active_floor, notiFunc=None, visualCallback = None):
         self.party = party
-        self.enemies = enemies
+        self.my_turn = my_turn
+        self.party_turn = 0
+        self.enemies = enemiess if enemiess != [] else self._generate_enemies(random.randint(1,3), enemies, bosses, room, floor, active_floor)
         self.notify = notiFunc
         self.trigger_visual = visualCallback
 
-    def _update(self):
-        self.enemies[:] = [e for e in self.enemies if e.hp > 0]
-        self.party[:] = [p for p in self.party if p.hp > 0]
-        
-        if not self.party:
-            return "GAME_OVER"
-        if not self.enemies:
-            return "VICTORY"
+    def _generate_enemies(self, count, enemiess, bosses, level, floor, activeFloor):
+
+        enemyList = [copy.deepcopy(enemy) for enemy in random.choices(enemiess, k=count)]
+        for i, enemy in enumerate(enemyList):
+            enemy.hp = enemy.base_hp + (level * floor)/2
+
+        if activeFloor == "elite":
+            boss_count = random.choices([1, 2], weights=[90, 10], k=1)[0]
+            bosses_picked = random.choices(bosses, k=boss_count)
+            enemyList.extend(bosses_picked)
+
+        return enemyList
+
+    def next_turn(self):
+        if not any(p.hp > 0 for p in self.party):
+            return
+
+        while True:
+            self.party_turn += 1
+            if self.party_turn >= len(self.party):
+                self.party_turn = 0
             
+            if self.party[self.party_turn].hp > 0:
+                break
+
+    def _update(self):
+
+        if all(p.hp <= 0 for p in self.party):
+            return "GAME_OVER"
+        
+        if all(e.hp <= 0 for e in self.enemies):
+            return "VICTORY"
+
         return "CONTINUE"
 
     def melee(self, caster, weapon, target, ignore=0):
@@ -80,7 +118,12 @@ class combatManager:
         if self.trigger_visual and danio_real > 0:
             self.trigger_visual(target, int(danio_real))
 
-        return self._update()
+        status = self._update()
+        
+        if status == "CONTINUE" and caster in self.party:
+            self.next_turn()
+
+        return status
     
     def cast(self, caster, weapon, spell, target = None):
         side = "enemies" if target in self.enemies else "party"
@@ -111,4 +154,15 @@ class combatManager:
         if spell.effects.get("lifesteal", False):
             return
 
-        return self._update()
+        status = self._update()
+        
+        if status == "CONTINUE" and caster in self.party:
+            self.next_turn()
+
+        return status
+
+
+class shopManager:
+
+    def __init__(self, party, shop_items, visualCallback = None):
+        pass

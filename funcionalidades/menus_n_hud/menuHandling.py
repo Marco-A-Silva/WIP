@@ -1,7 +1,6 @@
 import pygame, json, copy, random
 from vault.events import Event
 from funcionalidades.combat_n_entities.entities import Player
-from funcionalidades.menus_n_hud.hudHandling import drawAdvParty
 from funcionalidades.Utility.information import addHover
 
 def shopControl(events, selected_id, player, shopIsOpen, shopItems, running):
@@ -465,7 +464,7 @@ def drawEventMenu(display, event, selected_idx):
         )
         display[0].blit(opt_surf, opt_rect)
 
-def drawShopMenu(display, items, random_items, selected_idx_s):
+def drawShopMenu(display, random_items, selected_idx_s):
     item_rects = []  # <-- lista para guardar los rects
 
     overlay = pygame.Surface(display[0].get_size(), pygame.SRCALPHA)

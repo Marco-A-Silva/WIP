@@ -1,5 +1,5 @@
 import pygame
-from funcionalidades.Utility import addHover
+from funcionalidades.Utility.information import addHover
 
 hp_bar_state = {}
 
@@ -48,26 +48,6 @@ def draw_bar(surface, x, y, width, height, current, max_, state_dict, key, color
         text_y = y + (height - label.get_height()) // 2
 
         surface.blit(label, (text_x, text_y))
-
-class TextoFlotante:
-    def __init__(self, texto, x, y, color=(255, 50, 50)):
-        self.texto = str(texto)
-        self.x = x
-        self.y = y
-        self.color = color
-        self.alpha = 255
-        self.velocidad_y = -1  
-
-    def update(self):
-        """El objeto maneja su propio paso del tiempo."""
-        self.y += self.velocidad_y
-        self.alpha -= 4  # Se desvanece
-        
-    def draw(self, surface, font):
-        """El objeto sabe cómo dibujarse a sí mismo."""
-        superficie_texto = font.render(self.texto, True, self.color)
-        superficie_texto.set_alpha(max(0, self.alpha))
-        surface.blit(superficie_texto, (self.x, self.y))
 
 
 class gameRenderer:
@@ -142,7 +122,7 @@ class gameRenderer:
 
                 pygame.draw.rect(self.display[0], (20, 20, 30), bg_rect, border_radius=6)
                 pygame.draw.rect(self.display[0], (200, 200, 255), bg_rect, 1, border_radius=6)
-                display[0].blit(text, text_rect)
+                self.display[0].blit(text, text_rect)
 
             # --- guion ---
             if i < total - 1:
@@ -277,9 +257,6 @@ class combatRenderer:
                 hovered_tag = statuses_tags[i]
                 hovered_pos = mouse_pos
 
-        # ==========================
-        # TOOLTIP AL FINAL (Z-INDEX)
-        # ==========================
         if hovered_tag:
             tooltip = self.display[1][1].render(hovered_tag, True, (255,255,255))
             pad = 6
@@ -312,7 +289,6 @@ class combatRenderer:
         label_font = self.display[1][2]
         value_font = self.display[1][2]
 
-        # Columnas como antes
         col1_x = self.advParty_hud_length + 20
         col2_x = self.advParty_hud_length + width//2 +10
 
@@ -322,13 +298,11 @@ class combatRenderer:
         for idx, name in enumerate(stat_names):
             value = stat_values[idx]
 
-            # Primeras 6 en columna 1 (vit–gre + dmg red)
             if idx < 6:  
                 x_label = col1_x
                 x_value = col1_x + 70
                 y_line = start_y + idx * spacing
             else:
-                # Las restantes en columna derecha
                 x_label = col2_x
                 x_value = col2_x + 70
                 y_line = start_y + (idx - 6) * spacing
@@ -340,7 +314,6 @@ class combatRenderer:
             self.display[0].blit(val, (x_value, y_line))
 
     def draw_weapons_hud(self, char):
-        """Dibuja las armas primarias y secundarias del personaje en turno"""
         x = self.display[0].get_width() - 600
         for idx, slot in enumerate(["primary", "secondary"]):
             y = 300 + 40 + (idx * 50)
@@ -355,7 +328,6 @@ class combatRenderer:
                 val_surface = self.display[1][0].render(weapon.name, True, (255, 255, 255))
                 text_rect = val_surface.get_rect(topleft=(x + a, y))
                 
-                # Tooltips interactivos de tus armas usando match/case
                 match weapon.type:
                     case ["melee"] | ["melee", _]:
                         addHover(self.display, text_rect, "top", f"{int(weapon.dmg)} dmg", f"- scales with: {list(weapon.scaling.keys())}")
@@ -369,7 +341,6 @@ class combatRenderer:
                 self.display[0].blit(val_surface, (x + a, y))
     
     def draw_enemies(self, enemies, sub_state, selected_index, current_action):
-        """Dibuja la lista de enemigos e ilumina al que está bajo la mira en SELECT_TARGET"""
         for i, en in enumerate(enemies):
             texto = f"{en.name} Enemy hp: {int(en.hp)} {en.dmg} {en.dmg_red}"
             
@@ -406,3 +377,16 @@ class combatRenderer:
             ayuda_surface = font.render("Select a target...", True, (150, 150, 150))
             self.display[0].blit(ayuda_surface, (10, hud_y + 50))
 
+
+class shopRenderer:
+    def __init__(self, display, shop_items):
+        self.display = display 
+        self.shop_items = shop_items
+        self.item_rects = []
+
+        """colore = (255, 0, 255)
+        fonts = [pygame.font.SysFont("Arial", 30),pygame.font.SysFont("Arial", 20),pygame.font.SysFont("Arial", 15)]
+        display = [screen, fonts, colore]"""
+
+    def render(self, party, shop_items, selected_index):
+        pass

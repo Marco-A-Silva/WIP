@@ -1,4 +1,4 @@
-from funcionalidades.combat_n_entities.combat_items import  Weapon, Armor, Hook
+from funcionalidades.combat_n_entities.combat_items import  Weapon, Armor
 from .protocols import Equipable
 from funcionalidades.Utility.combat_utils import Hooks
 import random

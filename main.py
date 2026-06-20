@@ -9,14 +9,14 @@ from funcionalidades import gameManager, gameRenderer, gameState
 from funcionalidades import drawPauseMenu, drawShopMenu, drawScreen, drawChestMenu, drawRandomEvent, drawLayout, drawLevelUpMenu, drawEventMenu, drawExtraMenu, drawHub, drawNotifications
 
 #Import control functions
-from funcionalidades import menuControl, gameStateChange, shopControl, eventControl, extraControl, treasureControl, loadNewRoom, addRoom, removeRoom
+from funcionalidades import menuControl, gameStateChange, shopControl, eventControl, extraControl, treasureControl
 
 #Import blueprints
 from vault import blacksmith, bl_length, shopItems, enemies, bosses, enemySkills, magicSkills, meleeSkills, itemPools, staticEvents, shopSmith
 
 #Import generator functions
 from vault import generateItemPool
-from funcionalidades import getRandEvent, getCollisions, initializeFloorLayout, addNotification, pickNewEnemies
+from funcionalidades import getRandEvent, getCollisions, addNotification, pickNewEnemies
 from funcionalidades.Utility.saving_loading import create_initial_save, load_game_state
 
 #Import important classes
@@ -88,8 +88,6 @@ randEvent = None
 #-----------------------------------------------------------------------------------------------------------
 
 #Initialization of floor related elements
-
-floorLayout = initializeFloorLayout(floor)
 activeFloor = ""
 floorLoaded = False
 
@@ -155,7 +153,7 @@ pending_levels = 0
 
 menuState = "menu"
 appState = "start" #start/hub
-gameState = "chooseAction"
+gameStaate = "chooseAction"
 
 action = ""
 actionArgs = {}
@@ -169,12 +167,10 @@ input_lock = False
 myTurn = True
 enemy_turn_start = None
 running = True
-instance = gameState(display, advParty)
+instance = gameState(display, save_path)
 #-----------------------------------------------------------------------------------------------------------
 
 while running:
-
-    maxRoom = len(floorLayout)
 
     if appState == "hub":
         if not mouse_hidden:
@@ -187,7 +183,7 @@ while running:
 
 
     for key in ["shop","chest","event","extra"]:
-        eventList[key] = True if key in activeFloor else False
+        eventList[key] = True if key in instance.manager.active_floor else False
 
     try:
         events = pygame.event.get()
@@ -230,7 +226,7 @@ while running:
             transition_alpha += transition_speed
 
             if transition_alpha >= 255:
-                partida_party, enemyList, room, activeFloor, visual_level = load_game_state(save_path, floorLayout)
+                partida_party, enemyList, room = load_game_state(save_path)
                 advParty[:] = partida_party
                 player = advParty[0]
                 appState = "game"
@@ -244,7 +240,7 @@ while running:
             transition_alpha += transition_speed
 
             if transition_alpha >= 255:
-                partida_party, enemyList, room, activeFloor, visual_level = load_game_state(save_path, floorLayout)
+                partida_party, enemyList, room = load_game_state(save_path)
                 advParty[:] = partida_party
                 player = advParty[0]
                 appState = "hub"
@@ -325,7 +321,7 @@ while running:
 
         case "game": 
 
-            match activeFloor:
+            match instance.manager.active_floor:
                 case _ if activeFloor.startswith("extra_"):
                     
                     extra_floor = activeFloor[6:]
@@ -334,7 +330,7 @@ while running:
 
                     if eventList["extra"]:
                         drawExtraMenu(extra_floor, display, player, selected_id, extraOptions)
-                    else: floorLayout, floor, room, activeFloor, appState, notifications = loadNewRoom(floor, maxRoom,room,floorLayout,"roomTransition")
+                    else: instance.load_new_room()
                 
                 case "event":
 
@@ -353,7 +349,7 @@ while running:
                     if eventList["event"]:
                         drawEventMenu(display, staticEvent, selected_id)
                     else: 
-                        floorLayout, floor, room, activeFloor, appState, notifications = loadNewRoom(floor, maxRoom,room,floorLayout,"roomTransition")
+                        instance.load_new_room()
                         staticEvent = None
 
                 case "chest":
@@ -366,27 +362,10 @@ while running:
                     if eventList["chest"]:
                         drawChestMenu(display, itemPools, chestPool, selected_id)
                     else: 
-                        floorLayout, floor, room, activeFloor, appState, notifications = loadNewRoom(floor, maxRoom,room,floorLayout,"roomTransition")
+                        instance.load_new_room()
                         chestPool = None
 
-                case "shop":
-                    
-                    if not shopPool and eventList["shop"]: 
-                        shopPool = generateItemPool(shopItems) + generateItemPool(shopSmith)
-
-                    selected_id, eventList["shop"], running = shopControl(events, selected_id, player, eventList["shop"], shopPool, running)
-
-                    if eventList["shop"]:
-                        all_rects[1] = drawShopMenu(display, shopItems, shopPool, selected_id)
-                    else: 
-                        floorLayout, floor, room, activeFloor, appState, notifications = loadNewRoom(floor, maxRoom, room,floorLayout,"roomTransition")
-                        shopPool = None
-                
-                case "fight" | "elite":
-
-                    if not floorLoaded:
-                        instance = combatState(display, advParty, enemyList, myTurn, room, floor, activeFloor, pending_levels, addNotification)
-                        floorLoaded = True
+                case _:
 
                     for e in events:
                         if e.type == pygame.QUIT:
@@ -395,14 +374,11 @@ while running:
 
                     instance.update()
                     instance.render()
-                    drawLayout(display, visual_level, floorLayout, room, floor)
                     drawNotifications(display)
 
-                    if not instance.ongoing:
-                        if instance.result == "VICTORY":
-                            floorLayout, floor, room, activeFloor, appState, notifications = loadNewRoom(floor, maxRoom, room, floorLayout, "roomTransition")
-                            myTurn = True
-                            floorLoaded = False
+                    if instance.sub_state is not None and instance.sub_state.is_done:
+                        if instance.adv_party:
+                            instance.manager.load_new_room()
                             enemyList = []
                         else: running = False 
 
@@ -481,27 +457,27 @@ while running:
                             player = advParty[partyTurn]  # jugador actual
                             #randEvent, eventList, lastEvent = getRandEvent(eventList,lastEvent,randEvent,player)
                             
-                            match gameState:
+                            match gameStaate:
 
                                 case "chooseAction":
                                     menuState = "menu"
                                     match inputs:
                                         case {"shift": [active, pressed]} if pressed or active:
-                                            playerTargets,gameState,action,inputs,input_lock= gameStateChange(
+                                            playerTargets,gameStaate,action,inputs,input_lock= gameStaateChange(
                                                 inputs,"selectTarget",enemyList,"Attack"
                                             )
                                             playerAction = player.weapon["primary"].attack
                                             actionArgs = {"target": enemyList}
 
                                         case {"s": [active, pressed]} if pressed or active:
-                                            playerUsables,gameState,action,inputs,input_lock= gameStateChange(
+                                            playerUsables,gameStaate,action,inputs,input_lock= gameStaateChange(
                                                 inputs,"selectUsable",player.weapon["primary"].skills | getattr(player.weapon["secondary"], "skills",{}),"Choose Skill"
                                             )
                                             actionArgs = {"self": player,"target": enemyList}
 
                                         case {"a": [active, pressed]} if pressed or active:
                                             if player.weapon["primary"].type == "magic" and player.mp >= 10:
-                                                playerTargets,gameState,action,inputs,input_lock= gameStateChange(
+                                                playerTargets,gameStaate,action,inputs,input_lock= gameStaateChange(
                                                     inputs,"selectTarget",enemyList,"Magicly Attack"
                                                 )
                                                 playerAction = player.weapon["primary"].attack
@@ -511,7 +487,7 @@ while running:
 
                                         case {"ctrl": [active, pressed]} if pressed or active:
 
-                                            playerUsables, gameState, action, inputs, input_lock = gameStateChange(
+                                            playerUsables, gameStaate, action, inputs, input_lock = gameStaateChange(
                                                 inputs, "selectUsable", player.items, "Choose Item"
                                             )
                                             actionArgs = {"target": advParty}
@@ -544,11 +520,11 @@ while running:
                                             partyTurn, myTurn = passTurn(partyTurn, advParty)
                                             menuState = "menu"
                                             shiftPressed = False
-                                            playerTargets,gameState,action,inputs,input_lock= gameStateChange(inputs,"chooseAction",None,"")
+                                            playerTargets,gameStaate,action,inputs,input_lock= gameStaateChange(inputs,"chooseAction",None,"")
                                             break
 
                                     if keys[pygame.K_b]:
-                                        playerTargets,gameState,action,inputs,input_lock= gameStateChange(inputs,"chooseAction",None,"") 
+                                        playerTargets,gameStaate,action,inputs,input_lock= gameStaateChange(inputs,"chooseAction",None,"") 
                                 
                                 case "selectUsable":
                                     menuState = "usableSel"
@@ -573,11 +549,11 @@ while running:
                                             if partyLenght == 1 and type(playerAction) == Item:
                                                 player.useItem(ikey)
                                                 partyTurn, myTurn = passTurn(partyTurn, advParty)
-                                                playerTargets,gameState,action,inputs,input_lock= gameStateChange(inputs,"chooseAction",None,"") 
+                                                playerTargets,gameStaate,action,inputs,input_lock= gameStaateChange(inputs,"chooseAction",None,"") 
                                                 menuState = "menu"
                                                 break
                                             
-                                            playerTargets, gameState, action, inputs, input_lock = gameStateChange(
+                                            playerTargets, gameStaate, action, inputs, input_lock = gameStaateChange(
                                                 inputs,
                                                 "selectTarget",
                                                 actionArgs["target"],
@@ -587,7 +563,7 @@ while running:
                                             break
 
                                     if keys[pygame.K_b]:
-                                        playerTargets,gameState,action,inputs,input_lock= gameStateChange(inputs,"chooseAction",None,"") 
+                                        playerTargets,gameStaate,action,inputs,input_lock= gameStaateChange(inputs,"chooseAction",None,"") 
 
                             if advParty[partyTurn] != player or not myTurn:
                                 for e in enemyList:
