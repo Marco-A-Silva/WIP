@@ -16,7 +16,7 @@ def draw_round_rect_scaled(surface, color, rect, radius):
     smooth = pygame.transform.smoothscale(surf, (w, h))
     surface.blit(smooth, (x, y))
 
-def draw_bar(surface, x, y, width, height, current, max_, state_dict, key, color, textColor):
+def draw_bar(surface, x, y, width, height, current, max_, state_dict, key, color):
     if key not in state_dict:
         state_dict[key] = float(current)
 
@@ -35,20 +35,6 @@ def draw_bar(surface, x, y, width, height, current, max_, state_dict, key, color
     # Barra
     if current_width > 0:
         draw_round_rect_scaled(surface, color, (x, y, current_width, height), radius)
-
-    # Texto
-    font_size = max(8, int(height * 0.75))
-    font = pygame.font.SysFont("Arial", font_size)
-    text = str(key)[0:-2]
-
-    if textColor != (0,0,0):
-        label = font.render(text+": "+str(int(current))+"/"+str(int(max_)), True, textColor)
-        padding = int(height * 0.2)
-        text_x = x + padding
-        text_y = y + (height - label.get_height()) // 2
-
-        surface.blit(label, (text_x, text_y))
-
 
 class gameRenderer:
     def __init__(self, display):
@@ -142,50 +128,62 @@ class combatRenderer:
         self.display[0].fill("black")
         self.advParty_hud_length = 0
 
-        keys = pygame.key.get_pressed()
-        tab_pressed = keys[pygame.K_TAB]
-
-        for i, char in enumerate(party): 
-            self.draw_party(char, i, tab_pressed, party_turn, my_turn, current_action)
-
-        if party_turn < len(party):
-            char_actual = party[party_turn]
-            self.draw_weapons_hud(char_actual)
-
+        self.draw_party(party, party_turn, my_turn, selected_index, current_action, menu_options, sub_state)
         self.draw_enemies(enemies, sub_state, selected_index, current_action)
-        self.draw_hud(selected_index, current_action, sub_state, menu_options)
 
         for effect in active_effs:
-            effect.draw(self.display[0], self.display[1][0])
+            effect.draw(self.display[0])
 
-    def draw_party(self, char, i, tab_pressed, party_turn, my_turn, current_action):
-        width_px, height_px = self.display[1][0].size(char.name + "  ")
-        last_pmember = max(240, width_px + 20)
-        pygame.draw.rect(self.display[0], (50,50,50), (self.advParty_hud_length, 0, last_pmember, 130), border_radius=10)
-        pygame.draw.rect(self.display[0], (200,200,255), (self.advParty_hud_length, 0, last_pmember, 130), 2, border_radius=10)
-        self.draw_stat_effs(char, last_pmember)
+    def draw_member(self, number, char, x, y , width, height, name_width):
+        #Portrait
+        surface = self.display[0]
+        pygame.draw.rect(self.display[0], (50,50,50), (x, y, width, height), border_radius=10)
 
-        if tab_pressed:
-            self.draw_adv_stats(char,last_pmember, 105, i, party_turn, my_turn)
+        #Status Bars
+        draw_bar(surface, x+9 ,y + 50,width - 18 , 8, char._hp, char.max_hp, hp_bar_state, f"HP_{number}", (50, 200, 50))
+        draw_bar(surface, x+9 ,y + 60 ,width - 18 , 8, char.mp, char.max_mp, hp_bar_state, f"MP_{number}", (50, 50, 200))
+        draw_bar(surface, x+5 , y+79, width-9, 2, char.xp, char.xp2level, hp_bar_state, f"XP_{number}", (178, 213, 255))
 
-        draw_bar(self.display[0],25+self.advParty_hud_length,77,190, 2, char.sta, char.max_sta, hp_bar_state, f"STA_{i}", (50, 200, 110) if char.sta > min(getattr(char.weapon["secondary"], "weight", 100)*8, char.weapon["primary"].weight*8) else (255, 20, 110), (0, 0, 0))
-        draw_bar(self.display[0],20+self.advParty_hud_length,80,200, 15, char._hp, char.max_hp, hp_bar_state, f"HP_{i}", (50, 200, 50), (255, 255, 255))
-        draw_bar(self.display[0],20+self.advParty_hud_length,100,200, 15, char.mp, char.max_mp, hp_bar_state, f"MP_{i}", (50, 50, 200), (255, 255, 255))
-        draw_bar(self.display[0],20+self.advParty_hud_length,119,200, 6, char.xp, char.xp2level, hp_bar_state, f"XP_{i}", (178, 213, 255), (255,255,255) if char.xp < char.xp2level*0.1 else (20, 20, 20))
+        pygame.draw.rect(self.display[0], (200,200,255), (x, y, width, height), 2, border_radius=10)
 
         texto = self.display[1][0].render(char.name + " ", True, (255, 255, 255))
-        self.display[0].blit(texto, (20+self.advParty_hud_length, 20))
+        self.display[0].blit(texto, (x+10, y + (height-50)/3))
 
-        texto = self.display[1][1].render(str(char.gd) + "g", True, (255, 255, 255))
-        self.display[0].blit(texto, (20+self.advParty_hud_length, 50))
+        texto = self.display[1][1].render("Lv "+(str(char.level))+" ", True, (0, 150, 255))
+        self.display[0].blit(texto, (x+name_width, y + (height-50)/1.7))
 
-        if i == party_turn & (my_turn or current_action["target_team"] == "party"):
-            glow = pygame.Surface((last_pmember, 130), pygame.SRCALPHA)
-            pygame.draw.rect(glow, (255, 255, 0, 120), (0, 0, last_pmember, 130), width=4, border_radius=10)
-            pygame.draw.rect(glow, (255, 255, 0, 80), (2, 2, last_pmember-4, 130-4), width=2, border_radius=8)
-            self.display[0].blit(glow, (self.advParty_hud_length, 0))
+        texto = self.display[1][1].render(str(char.gd) + "g", True, (255, 255, 0))
+        self.display[0].blit(texto, (width - texto.width - 10, y + (height-50)/1.8))
 
-        self.advParty_hud_length += last_pmember
+    def draw_actions(self, char, x, y , width, height, selected_index, menu_options):
+  
+        pygame.draw.rect(self.display[0], (50,50,50), (x, y - height + 10, width, height), border_radius=10)
+        pygame.draw.rect(self.display[0], (200,200,255), (x, y - height + 10, width, height), 2, border_radius=10)
+
+        colors = {1: (255,255,255), 0: (100,100,100)}
+
+        for i, opt in enumerate(menu_options):
+            texto = self.display[1][0].render(f"{opt['name']} ", True, (255,255,0) if selected_index == i and opt.get("active", True) == True else colors[opt.get("active", True)])
+            self.display[0].blit(texto, (x +10, y - height + 20 + i * 35))
+
+    def draw_party(self, party, party_turn, my_turn, selected_index, current_action, menu_options, sub_state):
+        max_height = self.display[0].get_height()
+        
+        for i, char in enumerate(party):
+            width_name, height_name = self.display[1][0].size(char.name + "  ")
+            hud_y = max_height - (height_name + 50)
+            last_pmember = max(240, width_name + 20)
+
+            if i == party_turn and sub_state != "TARGET":
+                height_total = (len(menu_options) - 1) * 35 + height_name + 30
+                self.draw_actions(char, self.advParty_hud_length, hud_y, last_pmember, height_total, selected_index, menu_options)
+
+            self.draw_member(i, char, self.advParty_hud_length, hud_y, last_pmember, height_name + 50, width_name)
+            if i == party_turn and (current_action["target_team"] if current_action else "None") == "party":
+                pygame.draw.rect(self.display[0], (255, 255, 0, 80), (self.advParty_hud_length, hud_y, last_pmember, height_name + 50), width=2, border_radius=8)
+                
+
+            self.advParty_hud_length += last_pmember
 
     def draw_stat_effs(self, char, last_pmember):
         statuses_imgs = []
@@ -277,7 +275,7 @@ class combatRenderer:
         pygame.draw.rect(self.display[0], (50,50,50), (self.advParty_hud_length, y, width, height), border_radius=10)
         pygame.draw.rect(self.display[0], (200,200,255), (self.advParty_hud_length, y, width, height), 2, border_radius=10)
 
-        if i == party_turn & my_turn:
+        if i == party_turn and my_turn:
             glow = pygame.Surface((width, height), pygame.SRCALPHA)
             pygame.draw.rect(glow, (255, 255, 0, 120), (0, 0, width, height), width=4, border_radius=10)
             pygame.draw.rect(glow, (255, 255, 0, 80), (2, 2, width-4, height-4), width=2, border_radius=8)
@@ -341,10 +339,10 @@ class combatRenderer:
                 self.display[0].blit(val_surface, (x + a, y))
     
     def draw_enemies(self, enemies, sub_state, selected_index, current_action):
-        for i, en in enumerate(enemies):
+        for i, en in enumerate([e for e in enemies if e.hp > 0]):
             texto = f"{en.name} Enemy hp: {int(en.hp)} {en.dmg} {en.dmg_red}"
             
-            if sub_state == "SELECT_TARGET" and i == selected_index and current_action["target_team"] == "enemies":
+            if sub_state == "TARGET" and i == selected_index and current_action["target_team"] == "enemies":
                 color_texto = (255, 255, 100)
             else:
                 color_texto = self.display[2]
@@ -356,7 +354,7 @@ class combatRenderer:
         font = self.display[1][0]
         hud_y = self.display[0].get_height() - 300 
         
-        if sub_state == "SELECT_ACTION":
+        if sub_state in ["SELECT_ACTION", "SELECT_ITEM", "SELECT_SKILL"]:
             y_offset = hud_y + 10
             for i, opcion in enumerate(menu_options):
                 es_seleccionado = (i == selected_index)
@@ -377,16 +375,43 @@ class combatRenderer:
             ayuda_surface = font.render("Select a target...", True, (150, 150, 150))
             self.display[0].blit(ayuda_surface, (10, hud_y + 50))
 
+        
 
 class shopRenderer:
-    def __init__(self, display, shop_items):
-        self.display = display 
-        self.shop_items = shop_items
-        self.item_rects = []
+    def __init__(self, display):
+        self.display = display
 
         """colore = (255, 0, 255)
         fonts = [pygame.font.SysFont("Arial", 30),pygame.font.SysFont("Arial", 20),pygame.font.SysFont("Arial", 15)]
         display = [screen, fonts, colore]"""
 
-    def render(self, party, shop_items, selected_index):
-        pass
+    def render(self, sub_state, party, selected_index, ui, effs):
+        pygame.draw.rect(self.display[0], (50, 50, 50), ui.global_rect)
+
+        self._render_selection(self.display[0], party, selected_index, sub_state)
+    
+        ui.draw(self.display)
+        for effect in effs:
+            effect.draw(self.display[0])
+
+    def _render_selection(self, surface, party, selected_index, sub_state): 
+        party_hud_length = 0
+        for i, char in enumerate(party):
+            width_px, height_px = self.display[1][0].size(char.name + "  ")
+            last_pmember = max(165, width_px + 20)
+            pygame.draw.rect(self.display[0], (50,50,50), (0, party_hud_length, last_pmember, height_px + 20), border_radius=10)
+            pygame.draw.rect(self.display[0], (200,200,255), (0, party_hud_length, last_pmember, height_px + 20), 2, border_radius=10)
+
+            texto = self.display[1][0].render(char.name + " ", True, (255, 255, 255))
+            self.display[0].blit(texto, (20+party_hud_length, height_px/2 - 5))
+
+            texto = self.display[1][1].render(str(char.gd) + "g", True, (255, 255, 0, 120))
+            self.display[0].blit(texto, (party_hud_length + texto.width + width_px, 18))
+
+            if i == selected_index and sub_state == "SELECT_SHOPPER":
+                glow = pygame.Surface((last_pmember, 130), pygame.SRCALPHA)
+                pygame.draw.rect(glow, (255, 255, 0, 120), (0, party_hud_length, last_pmember, height_px + 20), width=4, border_radius=10)
+                pygame.draw.rect(glow, (255, 255, 0, 80), (2, party_hud_length, last_pmember, height_px + 20), width=2, border_radius=8)
+                self.display[0].blit(glow, (party_hud_length, 0))
+
+            party_hud_length += last_pmember

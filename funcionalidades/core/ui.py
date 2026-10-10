@@ -7,6 +7,8 @@ class UIElement:
         self.local_rect = pygame.Rect(x, y, width, height)
         self.parent = None
         self.is_active = True
+        self.is_hovered = False
+        self.is_selected = False
 
     @property
     def global_x(self):
@@ -26,7 +28,8 @@ class UIElement:
 
     @requiere_active
     def update(self, *args, **kwargs):
-        pass
+        mouse_pos = pygame.mouse.get_pos()
+        self.is_hovered = self.global_rect.collidepoint(mouse_pos)
 
     @requiere_active
     def draw(self, surface, *args, **kwargs):
@@ -36,9 +39,9 @@ class UIElement:
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.global_rect.collidepoint(event.pos):
-                self.on_click()
+                self.execute()
         
-    def on_click(self):
+    def execute(self):
         pass
 
 
@@ -51,16 +54,14 @@ class UIPanel(UIElement):
         child.parent = self
         self.children.append(child)
 
+    def update(self, *args, **kwargs):
+        super().update(args, kwargs)
+        for child in reversed(self.children):
+            child.update()
+
     @requiere_active
     def handle_event(self, event):
-        for child in reversed(self.children):
-            if hasattr(child, 'handle_event'):
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if child.global_rect.collidepoint(event.pos):
-                        child.handle_event(event)
-                        return
-                else:
-                    child.handle_event(event)
+        pass
 
     @requiere_active
     def draw(self, surface):
@@ -207,21 +208,67 @@ class HBox(UIPanel):
             self.local_rect.width = rows[0]["width"]
 
 
-class UISlot(UIElement):
+class UILabel(UIElement):
+    def __init__(self, text, font, color=(255, 255, 255)):
+        width, height = font.size(text)
+        super().__init__(0, 0, width, height)
+        self.text = text
+        self.font = font
+        self.color = color
+
+    def draw(self, display):
+        surface = display[0]
+        text_surf = self.font.render(self.text, True, self.color)
+        surface.blit(text_surf, (self.global_x, self.global_y))
+
+
+class SItemSlot(UIElement):
     def __init__(self, width, height, name, data):
         super().__init__(0, 0, width, height)
         self.name = name
         self.data = data
 
     def draw(self, display):
-        pygame.draw.rect(display[0], (50, 50, 50), self.global_rect)
-        pygame.draw.rect(display[0], (200, 200, 200), self.global_rect, 2)
+        if self.is_hovered or self.is_selected:
+            color_fondo = (80, 80, 80)
+            color_borde = (255, 255, 0)
+            grosor_borde = 3
+        else:
+            color_fondo = (50, 50, 50)
+            color_borde = (200, 200, 200)
+            grosor_borde = 2
+
+        pygame.draw.rect(display[0], color_fondo, self.global_rect)
+        pygame.draw.rect(display[0], color_borde, self.global_rect, grosor_borde)
         
         text_surface = display[1][0].render(str(self.name), True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=self.global_rect.center)
         
         display[0].blit(text_surface, text_rect)
 
-    def on_click(self):
+    def execute(self):
         if callable(self.data):
             self.data()
+            
+class CharSlot(UIElement):
+    def __init__(self, width, height, char, index, open_details):
+        super().__init__(0, 0, width, height)
+        self.char = char
+        self.index = index
+        self.open_details = open_details
+        
+    def execute(self):
+        self.open_details(self.char)
+
+class SCharSlot(CharSlot):
+    def __init__(self, width, height, char, index, set_active_shopper, open_details):
+        super().__init__(width, height, char, index, open_details)
+        self.set_active_shopper = set_active_shopper
+
+class DetailsMenu(UIPanel):
+    def __init__(self, screen_width, screen_height, entity, fonts, close_callback):
+        super().__init__(0, 0, screen_width, screen_height)
+        self.entity = entity
+        self.close_callback = close_callback
+        font_title = fonts[1]
+        font_text = fonts[0]

@@ -1,5 +1,12 @@
 from enum import IntFlag, auto
 
+# Así se vería tu diccionario de efectos internamente
+ewffects = {
+    "flat": {"dmg": 10, "hp": 5},      # Sumas directas
+    "percent": {"dmg": 0.20},          # Multiplicadores
+    "tags": {"target": "aoe"}          # Comportamientos (no se suman)
+}
+
 RUNETYPE = ["Core", "Expression", "Modifier"]
 
 class dmgType(IntFlag):

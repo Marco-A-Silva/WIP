@@ -20,18 +20,18 @@ def generateItemPool(possibleItems):
 
 shopItems = [
     [#common
-        [Item("Health Vial",lambda self: modifyAttrs(self.owner, {"hp": lambda x: x+self.owner.max_hp * 0.15}),2),15],
-        [Item("Aether Essence", lambda self: modifyAttrs(self.owner, {"mp": lambda x: x+self.owner.max_mp * 0.15}),2),15],
+        [Item("Health Vial",lambda self: modifyAttrs(self.owner, {"hp": lambda x: x+self.owner.max_hp * 0.15}),1),15],
+        [Item("Aether Essence", lambda self: modifyAttrs(self.owner, {"mp": lambda x: x+self.owner.max_mp * 0.15}),1),15],
     ],
     [#uncommon
-        [Item("Invigorating Tonic", lambda self: self.owner.addStatusEffect(OverTimeEffects(self.owner.armor,2,effects={"dmg_red": (0.25, 1)})), 2), 30],
-        [Item("Stonegolem Essence", lambda self: self.owner.addStatusEffect(OverTimeEffects(self.owner.armor, 3, effects={"dmg_red": (0.45,1)})),2),5],
+        [Item("Invigorating Tonic", lambda self: self.owner.addStatusEffect(OverTimeEffects(self.owner.armor,2,effects={"dmg_red": (0.25, 1)})), 1), 30],
+        [Item("Stonegolem Essence", lambda self: self.owner.addStatusEffect(OverTimeEffects(self.owner.armor, 3, effects={"dmg_red": (0.45,1)})),1),5],
     ],
     [#rare
         [Item("Ether Draught", lambda self: (modifyAttrs(self.owner, {"mp": lambda x: x+self.owner.max_mp}),
-                                            self.owner.addStatusEffect(OverTimeEffects(self.owner.weapon,2,effects={"magic_dmg": (round(self.owner.weapon.magic_dmg*-0.4), 1)}))),2),5],
+                                            self.owner.addStatusEffect(OverTimeEffects(self.owner.weapon,2,effects={"magic_dmg": (round(self.owner.weapon.magic_dmg*-0.4), 1)}))),1 ),5],
         [Item("Berserker Serum", lambda self: (self.owner.addStatusEffect(OverTimeEffects(self.owner.armor, 2, effects={"dmg_red": (-0.4,1)}),
-                                                self.owner.addStatusEffect(OverTimeEffects(self.owner.weapon, 2, effects={"melee_dmg": (100,1)})))), 2),5],
+                                                self.owner.addStatusEffect(OverTimeEffects(self.owner.weapon, 2, effects={"melee_dmg": (100,1)})))), 1),5],
     ],
     [#legendary
         [Item("Rejuvenation Nectar", lambda self: self.owner.addStatusEffect(OverTimeEffects(self.owner, 3, effects={"hp": (self.owner.max_hp*0.15,2)})), 1),5],

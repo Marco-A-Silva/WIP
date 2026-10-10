@@ -1,13 +1,12 @@
 import pygame, random, copy, os
-from .ui import HBox, VBox, UIPanel, UISlot
+from .ui import HBox, VBox, UIPanel, SItemSlot
 from .view import gameRenderer, combatRenderer, shopRenderer
 from .manager import gameManager, combatManager, shopManager
 from .visuals import floatingText, animation
-from vault.items import shopItems
-from vault.gear import blacksmith
 from funcionalidades.Utility.information import addNotification
 from funcionalidades.Utility.saving_loading import load_game_state
 
+ENEMY_TURN_DELAY = 1000  # ms entre cada accion enemiga
 
 "STATE = LOGICA PURA"
 "MANAGER = ORCHESTRADOR (MANEJA LAS COSAS -ej- crear enemyList o itemPool, compras, ataques, aka lo que pasa en el estado digamos)"
@@ -18,7 +17,7 @@ class State:
     def __init__(self, display):
         self.display = display
         self.is_done = False
-        
+        self.active_effs = []
 
     def handle_event(self, event):
         pass
@@ -29,13 +28,21 @@ class State:
     def render(self):
         pass
 
+    def _floating_text(self, x, y, cantidad, font, color=(255, 50, 50)):
+        nuevo_texto = floatingText(str(cantidad), x, y, font, color=color)
+        self.active_effs.append(nuevo_texto)
+
+    def gen_floating_text():
+        pass
+
 
 class menuState(State):
-    def __init__(self, display, options, columnas):
+    def __init__(self, display, options, columnas, quit):
         super().__init__(display)
         self.options = options
         self.selected_index = 0
         self.columnas = max(1, columnas)
+        self.quit = quit
 
     def handle_event(self, event):
         if event.type != pygame.KEYDOWN:
@@ -98,7 +105,6 @@ class gameState(State):
             datos = load_game_state(save_path) 
             
             self.adv_party = datos["party"]
-            print(self.adv_party)
             self.enemies = datos["enemies"]
             self.room = datos["room"]
             self.floor = 1
@@ -108,6 +114,7 @@ class gameState(State):
             self.floor = 1
             self.floor_layout = None
             self.adv_party = []
+            self.enemies = []
 
         self.manager = gameManager(room, floor, floor_layout)
         self.renderer = gameRenderer(self.display)
@@ -120,7 +127,7 @@ class gameState(State):
         if event.type == pygame.KEYDOWN: 
             if event.key == pygame.K_ESCAPE:
                 if self.menu: self.menu = None
-                else: self.menu = pauseState(self.display)
+                else: self.menu = pauseState(self.display, save= self.save, quit=self.exitMenu)
                 return
 
             if event.key == pygame.K_F5:
@@ -138,13 +145,13 @@ class gameState(State):
                 self.menu = None
             return
 
-        for vfx in self.vfx:
-            vfx.update()
-        self.vfx = [e for e in self.vfx if not e.is_done]
+        #for vfx in self.vfx:
+        #    vfx.update()
+        #self.vfx = [e for e in self.vfx if not e.is_done]
 
         if self.is_transitioning:
-            transicion = next((v for v in self.vfx if isinstance(v, animation)), None)
-            if transicion and transicion.In:
+        #    transicion = next((v for v in self.vfx if isinstance(v, animation)), None)
+        #    if transicion and transicion.In:
                 self.load_new_room()
                 self.is_transitioning = False
 
@@ -157,13 +164,14 @@ class gameState(State):
                     return
 
                 self.sub_state = None
+                self.enemies = []
                 self.is_transitioning = True
                 self.vfx.append(animation(velocity=2))
 
     def update_state(self, tipo_sala):
         match tipo_sala:
             case "fight" | "elite":
-                self.sub_state = combatState(self.display, self.adv_party, [], True, self.manager.room, self.manager.floor, self.manager.active_floor, addNotification) 
+                self.sub_state = combatState(self.display, self.adv_party, self.enemies, True, self.manager.room, self.manager.floor, self.manager.active_floor, addNotification) 
             case "chest":
                 self.sub_state = chestState(self.display)
             case "shop":
@@ -179,8 +187,10 @@ class gameState(State):
         tipo_sala = self.manager.active_floor
         self.update_state(tipo_sala)
 
+    def exitMenu(self):
+        self.menu = None
 
-    def guardar_progreso(self):
+    def save(self):
         pass
 
 
@@ -208,109 +218,159 @@ class combatState(State):
         super().__init__(display)
         self.selected_index = 0
 
-        self.manager = combatManager(self.party, self.enemies, my_turn, room, floor, activeFloor, addNotification, self._crear_texto_flotante)
+        self.manager = combatManager(party, enemies, my_turn, room, floor, activeFloor, addNotification, self.gen_floating_text)
         self.renderer = combatRenderer(self.display)
 
-        self.sub_state = "SELECT_ACTION"
+        self.enemy_turn_start = None
+
+        self.sub_state = "MENU"
         self.current_action = None
-        self.menu_options = []
-        self.active_effs = []    
+        self.menu_options = []  
 
         self.menu_opt_update()
 
     def menu_opt_update(self):
-        if self.party_turn >= len(self.party):
+        if not self.manager.my_turn:
             return
         
-        personaje_actual = self.manager.party[self.manager.party_turn]
         self.menu_options = []
+        personaje_actual = self.manager.order[self.manager.turn] 
+        special_toggle = hasattr(personaje_actual, 'skills') and personaje_actual.skills
 
-        if self.sub_state == "SELECT_ACTION":
- 
-            arma = personaje_actual.weapon.get("primary") if hasattr(personaje_actual, 'weapon') else None
-            if arma:
-                self.menu_options.append({
-                    "name": f"Attack ({arma.name})",
-                    "type": "REQUIRES_TARGET",
-                    "execute": lambda target: self.manager.melee(personaje_actual, arma, target),
-                    "target_team": "enemies"
-                })
-            else:
-                self.menu_options.append({
-                    "name": "Attack (fists)",
-                    "type": "REQUIRES_TARGET",
-                    "execute": lambda target: self.manager.melee(personaje_actual, None, target),
-                    "target_team": "enemies"
-                })
-
-
-            if hasattr(personaje_actual, 'skills') and personaje_actual.skills:
-                self.menu_options.append({
-                    "name": "Skills",
-                    "type": "CHOOSE_SKILL",
-                    "execute": None,
-                    "target_team": "enemies"
-                })
-
+        if self.sub_state == "MENU":
+            
             self.menu_options.append({
-                "name": "Items",
-                "type": "CHOOSE_ITEM",
-                "execute": None,
+                "name": "Attack",
+                "nstate": "ATTACK",
+                "active": True,
                 "target_team": "enemies"
             })
 
-        elif self.sub_state == "SELECT_SKILL":
-            for nombre_skill in personaje_actual.skills.keys():
+            self.menu_options.append({
+                "name": "Special",
+                "nstate": "SPECIAL",
+                "active" : special_toggle,
+                "target_team": "enemies"
+            })
+
+            self.menu_options.append({
+                "name": "Inventory",
+                "active": True,
+                "nstate": "INVENTORY",
+                "target_team": "self"
+            })
+
+        elif self.sub_state == "ATTACK":
+            for weapon in personaje_actual.weapon.values():
+                if weapon is None:
+                    continue
                 self.menu_options.append({
-                    "name": nombre_skill,
-                    "type": "REQUIRES_TARGET",
-                    "execute": lambda target, sk=nombre_skill: personaje_actual.skills[sk](personaje_actual, target, "primary")
+                    "name": weapon.name,
+                    "nstate": "TARGET",
+                    "execute": lambda target, w=weapon: self.manager.melee(personaje_actual, w, target),
+                    "target_team": "enemies"
                 })
 
 
+        elif self.sub_state == "SPECIAL":
+            for nombre_skill in personaje_actual.skills.keys():
+                self.menu_options.append({
+                    "name": nombre_skill,
+                    "nstate": "TARGET",
+                    "execute": lambda target, sk=nombre_skill: personaje_actual.skills[sk](personaje_actual, target, "primary"),
+                    "target_team": "enemies"
+                })
+
+        elif self.sub_state == "INVENTORY":
+            for i, item in enumerate(personaje_actual.items):
+                self.menu_options.append({
+                    "name": item.name + " - " + str(item.uses),
+                    "nstate": "TARGET",
+                    "execute": lambda target, idx=i: self.manager.usar_item(personaje_actual, target, idx),
+                    "target_team": "party"
+                })
+
+        if not self.menu_options:
+            self.menu_options.append({
+                "name": "Nothing Here...",
+                "nstate": "MENU",
+                "active": False
+            })
+
+
     def handle_event(self, event):
+        if self.is_done or not self.manager.my_turn:
+            return
+
         if event.type != pygame.KEYDOWN:
             return
 
         if event.key == pygame.K_UP:
+
+            if self.sub_state == "MENU" and self.selected_index + -1 < len(self.menu_options) and not self.menu_options[self.selected_index - 1]["active"]:
+                self.selected_index = (self.selected_index - 1) % len(self.menu_options)
+
             self.selected_index = max(0, self.selected_index - 1)
         elif event.key == pygame.K_DOWN:
-            limite = len(getattr(self.manager, self.current_action.get("target_team", "enemies"))) if self.sub_state == "SELECT_TARGET" else len(self.menu_options)
+
+            if self.sub_state == "MENU" and self.selected_index + 1 < len(self.menu_options) and not self.menu_options[self.selected_index + 1]["active"]:
+                self.selected_index = (self.selected_index + 1) % len(self.menu_options)
+
+            limite = len(self.get_valid_targets()) if self.sub_state == "TARGET" else len(self.menu_options)
             self.selected_index = min(limite - 1, self.selected_index + 1)
         
-        elif event.key == pygame.K_BACKSPACE:
-            if self.sub_state in ["SELECT_SKILL", "SELECT_TARGET"]:
-                self.sub_state = "SELECT_ACTION"
-                self.selected_index = 0
-                self.menu_opt_update()
+        elif event.key == pygame.K_b:
+            self.sub_state = "MENU"
+            self.current_action = None
+            self.selected_index = 0
+            self.menu_opt_update()
 
         elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
-            if self.sub_state in ["SELECT_ACTION", "SELECT_SKILL"]:
+            if self.sub_state in ["MENU", "SPECIAL", "ATTACK", "INVENTORY"]:
                 opcion = self.menu_options[self.selected_index]
                 
-                if opcion["type"] == "CHOOSE_SKILL":
-                    self.sub_state = "SELECT_SKILL"
+                if opcion["nstate"] == "SPECIAL":
+                    self.current_action = opcion
+                    self.sub_state = "SPECIAL"
                     self.selected_index = 0
                     self.menu_opt_update()
                     
-                elif opcion["type"] == "REQUIRES_TARGET":
+                elif opcion["nstate"] == "ATTACK":
                     self.current_action = opcion
-                    self.sub_state = "SELECT_TARGET"
+                    self.sub_state = "ATTACK"
                     self.selected_index = 0 
+                    self.menu_opt_update()
+                
+                elif opcion["nstate"] == "INVENTORY":
+                    self.current_action = opcion
+                    self.sub_state = "INVENTORY"
+                    self.selected_index = 0 
+                    self.menu_opt_update()
 
-            elif self.sub_state == "SELECT_TARGET":
-                enemigo_objetivo = self.manager.enemies[self.selected_index]
+                elif opcion["nstate"] == "TARGET":
+                    self.current_action = opcion
+                    self.sub_state = "TARGET"
+                    self.selected_index = 0 
+                    self.menu_opt_update()
+
+            elif self.sub_state == "TARGET":
+                living_targets = self.get_valid_targets()
+                enemigo_objetivo = living_targets[self.selected_index]
                 result = self.current_action["execute"](enemigo_objetivo)
-
                 self.combat_flow(result)
+
+    def get_valid_targets(self):
+        team_list = getattr(self.manager, self.current_action.get("target_team", "enemies"))
+        return [e for e in team_list if e.hp > 0]
 
 
     def combat_flow(self, result):
         if result != "CONTINUE":
+            self.result = result
             self.is_done = True
             return
 
-        self.sub_state = "SELECT_ACTION"
+        self.sub_state = "MENU"
         self.selected_index = 0
         self.current_action = None
         
@@ -323,7 +383,7 @@ class combatState(State):
             enemies=self.manager.enemies,
             sub_state=self.sub_state,
             selected_index=self.selected_index,
-            party_turn=self.manager.party_turn,
+            party_turn=self.manager.turn,
             my_turn=self.manager.my_turn,
             current_action=self.current_action,
             menu_options=self.menu_options,
@@ -331,27 +391,36 @@ class combatState(State):
         )
 
 
-    def _crear_texto_flotante(self, objetivo, cantidad):
-        x, y = 0, 0
-
-        if objetivo in self.manager.enemies:
-            indice = self.manager.enemies.index(objetivo)
-            x = 350  
-            y = 300 + indice * 40 - 20 
-        elif objetivo in self.manager.party:
-            indice = self.manager.party.index(objetivo)
-            x = 50 + (indice * 240) 
-            y = 20 
-            
-        nuevo_texto = floatingText(cantidad, x, y, color=(255, 50, 50))
-        self.active_effs.append(nuevo_texto)
-
-
     def update(self):
         for efecto in self.active_effs:
             efecto.update()
 
         self.active_effs = [e for e in self.active_effs if e.alpha > 0]
+
+        if self.is_done:
+            return
+
+        if not self.manager.my_turn:
+            ahora = pygame.time.get_ticks()
+            if self.enemy_turn_start is None:
+                self.enemy_turn_start = ahora
+            elif ahora - self.enemy_turn_start >= ENEMY_TURN_DELAY:
+                self.enemy_turn_start = None
+                self.combat_flow(self.manager.enemy_turn())
+
+    def gen_floating_text(self, target, dmg):
+        x, y = 0, 0
+
+        if target in self.manager.enemies:
+            indice = self.manager.enemies.index(target)
+            x = 350  
+            y = 300 + indice * 40 - 20 
+        elif target in self.manager.party:
+            indice = self.manager.party.index(target)
+            x = 110 + (indice * 240) 
+            y = self.display[0].get_height() - 150
+
+        self._floating_text(x, y, str(dmg), self.display[1][0])
 
 
 class shopState(State):
@@ -359,66 +428,93 @@ class shopState(State):
         super().__init__(display)
         self.selected_index = 0
         self.turn = 0
-        self.party = adv_party
 
-        self.ui_root = UIPanel(0, 600, display[0].get_width(), 200)
-        self.lista_items = HBox(10, 0, display[0].get_width(), spacing=15, wrap=True, align="center")
-        self.ui_root.add_child(self.lista_items)
+        self.sub_state = "SELECT_SHOPPER"
 
-        self._generate_item_pool(shopItems)
-        for item in self.shop_items:
-            slot = UISlot(display[1][0].render(str(item[0].name), True, (255, 255, 255)).width + 20, 40, item[0].name, lambda i=item: self.comprar(i))
-            self.lista_items.add_child(slot)
+        self.manager = shopManager(adv_party, self.gen_floating_text)
+        self.renderer = shopRenderer(self.display)
 
-        self.active_effs = []
-        self.lista_items.recalculate_layout()
+        self.ui_root = UIPanel(0, 0, display[0].get_width(), display[0].get_height())
 
-        self.renderer = shopRenderer(self.display, self.shop_items)
-        self.manager = shopManager(self.party, self.shop_items,self._crear_texto_flotante)
+    #---------------------------------------------------------------------------------------------------------------------------
+    #Item List
+        self.item_list = HBox(10, 600, display[0].get_width(), spacing=15, wrap=True, align="center")
+        self.ui_root.add_child(self.item_list)
+
+        for item in self.manager.shop_items:
+            slot = SItemSlot(display[1][0].render(str(item[0].name), True, (255, 255, 255)).width + 20, 40, item[0].name, None)
+            slot.data = lambda s=slot, i=item: self.buy_item(s, i) 
+            self.item_list.add_child(slot)
+
+        self.item_list.recalculate_layout()
+    #---------------------------------------------------------------------------------------------------------------------------
+    #Player List
 
     def handle_event(self, event):
-        self.ui_root.handle_event(event)
 
-    def comprar(self, item):
-        print(f"Lógica de compra: {item[0].name}")
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self.selected_index = max(0, self.selected_index - 1)
+            elif event.key == pygame.K_DOWN:
+                limite = len(self.manager.party) if self.sub_state == "SELECT_SHOPPER" else len(self.manager.shop_items)
+                self.selected_index = min(limite - 1, self.selected_index + 1)
+            
+            elif event.key == pygame.K_BACKSPACE:
+                if self.sub_state == "BROWSING":
+                    self.sub_state = "SELECT_SHOPPER"
+                    self.selected_index = 0
 
-    def _generate_item_pool(self, possible_items):
+            elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
 
-        options = list(range(2, 11))
-        weights = [5, 10, 30, 40, 30, 10, 5, 2, 1]
-        amount = random.choices(options, k=1, weights=weights)[0]
+                if self.sub_state == "BROWSING":
+                    self.item_list.children[self.selected_index].execute()
+                elif self.sub_state == "SELECT_SHOPPER":
+                    self.manager.set_active_shopper(self.selected_index)
+                    self.sub_state = "BROWSING"
+                    self.selected_index = 0
+            elif event.key == pygame.K_p:
+                self.is_done = True
 
-        item_pool = []
-        for i in range(amount):
-            rarity = random.choices([0, 1, 2, 3], k=1, weights=[50, 25, 10, 5])[0]
-            item_pool.append(random.choice(possible_items[rarity]))
-
-            if random.randint(1, 20) == 20:
-                item_pool.append(random.choice(possible_items[rarity]))
-
-        self.shop_items = item_pool
+    def buy_item(self, slot, item):
+        cost = self.manager.process_purchase(item)
+        if cost:
+            self.gen_floating_text(slot, cost)
+        else: 
+            self.gen_floating_text(slot, "not enough money")
 
 
     def render(self):
-        pygame.draw.rect(self.display[0], (50, 50, 50), self.ui_root.global_rect)
-        self.ui_root.draw(self.display)
+        self.renderer.render(
+            self.sub_state, 
+            self.manager.party, 
+            self.selected_index,
+            self.ui_root, 
+            self.active_effs
+        )
 
-    def _crear_texto_flotante(self, itembox, precio):
-        x = itembox.x()
-        y = itembox.y()
-            
-        nuevo_texto = floatingText(precio, x, y, color=(255, 255, 0))
-        self.active_effs.append(nuevo_texto)
 
+    def gen_floating_text(self, slot, gold):
+        texto_str = str(gold)
+
+        fuente = self.display[1][0] 
+        ancho_texto = fuente.size(texto_str)[0]
+
+        x_ajustada = slot.global_rect.centerx - (ancho_texto // 2)
+        y_ajustada = slot.global_rect.top - 20
+
+        self._floating_text(x_ajustada, y_ajustada, texto_str, self.display[1][0], color=(255, 215, 0))
 
     def update(self):
-        self.ui_root.update()
+        if self.sub_state == "BROWSING":
+            self.ui_root.update()
+        else:
+            for slot in self.item_list.children:
+                slot.is_selected = False
 
         for efecto in self.active_effs:
             efecto.update()
 
         self.active_effs = [e for e in self.active_effs if e.alpha > 0]
-
 
 
 class eventState(State):
@@ -445,12 +541,22 @@ class hubState(State):
 
 
 class pauseState(menuState):
-    def __init__(self, display, columns = 1):
-        super().__init__(display, ["Continuar", "Guardar", "Salir al Menú"], columns)
+    def __init__(self, display, columns = 1, save = callable, quit = callable):
+        super().__init__(display, ["Continuar", "Guardar", "Salir al Menú"], columns, quit)
+        self.save = save
+
+    def handle_event(self, event):
+        super().handle_event(event)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN: 
+                if self.selected_index == 0:
+                    self.quit()
+                elif self.selected_index == 1:
+                    self.save()
 
 
 class lvlUpState(menuState):
-    def __init__(self, display, char):
+    def __init__(self, display, char, quit):
         options = [
             "Vitality " + str(char.statBlock[0]),
             "Mind " + str(char.statBlock[1]),
@@ -463,4 +569,4 @@ class lvlUpState(menuState):
             "Endurance " + str(char.statBlock[8]),
             "Dexterity " + str(char.statBlock[9])
         ]
-        super().__init__(display, options)
+        super().__init__(display, options, 2, quit)

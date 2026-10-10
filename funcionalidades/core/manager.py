@@ -1,9 +1,12 @@
-import random
+import random, copy
 from vault.enemies import enemies, bosses
+from vault.items import shopItems
+from vault.gear import blacksmith
+from funcionalidades.core.AI import EnemyAi, Attack, UseSkill
 from funcionalidades.combat_n_entities.entities import Enemy
 
 MAIN_ROOMS = ["fight","chest","shop","event","extra"]
-MAIN_ODDS = [55,12,6,22,5]
+MAIN_ODDS = [1,0,0,0,0] # [55,12,6,22,5]
 EXTRA_ROOMS = ["dojo","rest site","school of magic"]
 EXTRA_ODDS = [1,3,1]
 
@@ -33,7 +36,7 @@ class gameManager:
             layout.append("elite")
         else: layout.append("shop")
 
-        layout.insert(1, "shop")
+        layout.insert(1,"shop")
         
         self.max_rooms = len(layout)
         self.floor_layout = layout
@@ -65,36 +68,75 @@ class combatManager:
     
     def __init__(self, party, enemiess, my_turn, room, floor, active_floor, notiFunc=None, visualCallback = None):
         self.party = party
-        self.my_turn = my_turn
-        self.party_turn = 0
+        self.turn = 0
         self.enemies = enemiess if enemiess != [] else self._generate_enemies(random.randint(1,3), enemies, bosses, room, floor, active_floor)
+        self.order = self.party + self.enemies
         self.notify = notiFunc
-        self.trigger_visual = visualCallback
+        self.visual_trigger = visualCallback
+
+        if self.order[self.turn].hp <= 0:
+            self.next_turn()
+   
+    @property
+    def my_turn(self):
+        return self.order[self.turn] in self.party
 
     def _generate_enemies(self, count, enemiess, bosses, level, floor, activeFloor):
-
         enemyList = [copy.deepcopy(enemy) for enemy in random.choices(enemiess, k=count)]
         for i, enemy in enumerate(enemyList):
             enemy.hp = enemy.base_hp + (level * floor)/2
 
         if activeFloor == "elite":
             boss_count = random.choices([1, 2], weights=[90, 10], k=1)[0]
-            bosses_picked = random.choices(bosses, k=boss_count)
+            bosses_picked = [copy.deepcopy(b) for b in random.choices(bosses, k=boss_count)]
             enemyList.extend(bosses_picked)
 
         return enemyList
 
     def next_turn(self):
-        if not any(p.hp > 0 for p in self.party):
-            return
+        status = self._update()
+        
+        if status != "CONTINUE":
+            return status
 
         while True:
-            self.party_turn += 1
-            if self.party_turn >= len(self.party):
-                self.party_turn = 0
-            
-            if self.party[self.party_turn].hp > 0:
-                break
+            self.turn = (self.turn + 1) % len(self.order)
+            if self.order[self.turn].hp > 0:
+                return "CONTINUE"
+
+    def enemy_turn(self):
+        if self.my_turn:
+            return "CONTINUE"
+
+        status = self._update()
+        if status != "CONTINUE":
+            return status
+
+        enemy = self.order[self.turn]
+        if not hasattr(enemy, "ai") or enemy.ai is None:
+            enemy.ai = EnemyAi(
+                [UseSkill(skill) for skill in enemy.skills] + [Attack()],
+                enemy.personality if hasattr(enemy, "personality") else None
+            )
+
+        allies = [e for e in self.enemies if e is not enemy and e.hp > 0]
+        targets = [p for p in self.party if p.hp > 0]
+
+        action, target = enemy.ai.choose_action(enemy, allies, targets)
+
+        if action and target:
+            hp_antes = target.hp
+            action.execute(enemy, allies, targets, target)
+            danio_real = hp_antes - target.hp
+
+            if self.notify:
+                accion = f"used {action.name} on" if hasattr(action, "name") else "attacked"
+                self.notify(f"{enemy.name} {accion} {target.name}!", 1.5)
+
+            if self.visual_trigger and danio_real > 0:
+                self.visual_trigger(target, int(danio_real))
+
+        return self.next_turn()
 
     def _update(self):
 
@@ -115,8 +157,12 @@ class combatManager:
         if self.notify:
             self.notify(f"{caster.name} attacked {target.name}!", 1.5)
 
-        if self.trigger_visual and danio_real > 0:
-            self.trigger_visual(target, int(danio_real))
+        if self.visual_trigger and danio_real > 0:
+            self.visual_trigger(target, int(danio_real))
+
+        if target.hp <= 0:
+            caster.gold_reward(target.reward)
+            caster.gainXP(target.reward)
 
         status = self._update()
         
@@ -124,6 +170,7 @@ class combatManager:
             self.next_turn()
 
         return status
+        
     
     def cast(self, caster, weapon, spell, target = None):
         side = "enemies" if target in self.enemies else "party"
@@ -143,7 +190,7 @@ class combatManager:
                 targets.append(target)
 
         for tar in targets:
-            finalDmg = caster.statBlock[2]*1.5 + spell.effect.get("baseDmg", 0) + spell.effects.get("bonusDmg",0)
+            finalDmg = caster.statBlock[2] + spell.effect.get("baseDmg", 0) + spell.effects.get("bonusDmg",0)
             
         if spell.effects.get("poison", False):
             return
@@ -161,8 +208,62 @@ class combatManager:
 
         return status
 
+    def usar_item(self, caster, target, item_index):
+        item = caster.items[item_index]
+        
+        item.function(item)
+        
+        item.uses -= 1
+        if item.uses <= 0:
+            del caster.items[item_index]
+
+        if self.notify:
+            self.notify(f"¡{caster.name} usó {item.name}!", 1.5)
+
+        status = self._update()
+        if status == "CONTINUE" and caster in self.party:
+            self.next_turn()
+
+        return status
+
 
 class shopManager:
 
-    def __init__(self, party, shop_items, visualCallback = None):
-        pass
+    def __init__(self, party, visualCallback = None):
+        self.party = party
+        self._generate_item_pool(shopItems)
+        self.visual_trigger = visualCallback
+        self.active_shopper = None
+    
+    def set_active_shopper(self, index):
+        if 0 <= index < len(self.party):
+            self.active_shopper = self.party[index]
+            return True
+        return False
+
+    def _generate_item_pool(self, possible_items):
+
+        options = list(range(2, 11))
+        weights = [5, 10, 30, 40, 30, 10, 5, 2, 1]
+        amount = random.choices(options, k=1, weights=weights)[0]
+
+        item_pool = []
+        for i in range(amount):
+            rarity = random.choices([0, 1, 2, 3], k=1, weights=[50, 25, 10, 5])[0]
+            item_pool.append(random.choice(possible_items[rarity]))
+
+            if random.randint(1, 20) == 20:
+                item_pool.append(random.choice(possible_items[rarity]))
+
+        self.shop_items = item_pool
+
+    def process_purchase(self, item):
+        if not self.active_shopper:
+            return None
+
+        if self.active_shopper.gd >= item[1]:
+            self.active_shopper.gold_remove(item[1])
+            self.active_shopper.equip_armament(copy.deepcopy(item[0]), False)
+            return -item[1]
+        else:
+            return None

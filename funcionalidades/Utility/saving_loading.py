@@ -266,9 +266,20 @@ def load_game_state(save_path):
 
         # ----- ITEMS -----
         for it in p.get("items", []):
-            for shop_it, *_ in shopItems:
-                if shop_it[0].name == it:
-                    player.equip_armament(shop_it[0], False)
+            item_encontrado = False
+            
+            for rareza in shopItems:
+                for datos_item in rareza: 
+                    item_obj = datos_item[0]
+                    
+                    if item_obj.name == it:
+                        nuevo_item = copy.deepcopy(item_obj)
+                        player.equip_armament(nuevo_item, False)
+                        item_encontrado = True
+                        break
+                        
+                if item_encontrado:
+                    break
 
         advParty.append(player)
 

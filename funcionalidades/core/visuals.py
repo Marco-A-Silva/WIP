@@ -33,11 +33,12 @@ class animation:
 
 
 class floatingText:
-    def __init__(self, texto, x, y, color=(255, 50, 50)):
-        self.texto = str(texto)
+    def __init__(self, texto, x, y, font, color=(255, 50, 50)):
+        self.texto = texto
         self.x = x
         self.y = y
         self.color = color
+        self.font = font
         self.alpha = 255
         self.velocidad_y = -1  
 
@@ -46,8 +47,8 @@ class floatingText:
         self.y += self.velocidad_y
         self.alpha -= 4  # Se desvanece
         
-    def draw(self, surface, font):
+    def draw(self, surface):
         """El objeto sabe cómo dibujarse a sí mismo."""
-        superficie_texto = font.render(self.texto, True, self.color)
+        superficie_texto = self.font.render(self.texto, True, self.color)
         superficie_texto.set_alpha(max(0, self.alpha))
         surface.blit(superficie_texto, (self.x, self.y))

@@ -20,7 +20,7 @@ class Attack(Action):
     type = "attack"
 
     def possible_targets(self, user, allies, enemies):
-        return enemies
+        return [e for e in enemies if e.hp > 0]
 
     def score(self, user, allies, enemies):
         best_score = -999
@@ -53,9 +53,10 @@ class UseSkill(Action):
 
     def possible_targets(self, user, allies, enemies):
         if self.type == "buff" or self.type == "heal":
-            return allies + [user]
+            return [a for a in allies + [user] if a.hp > 0]
         if self.type == "special" or self.type == "debuff":
-            return enemies
+            return [e for e in enemies if e.hp > 0]
+        return []
 
     def score(self, user, allies, enemies):
         best_score = -999

@@ -58,7 +58,7 @@ class Entity():
     def __init__(self, applyMods, hp: float, mp:int = 100, sta:int = 60, max_sta:int = 60, max_hp:int = 0, max_mp:int = 0, weapons: {} | None = None, armor: {} | None = None, stat_effs: list | None = None, statBlock: list = [], name = "Entity"):
         self.name = name
         self.statBlock = StatBlock(self,statBlock) if statBlock else StatBlock(self,[random.randint(0,11) for i in range(10)])
-        """Vitality/Mind/Inteligence/Strength/Luck/Charisma/Awareness/Agility/Endurance/Dexterity"""
+        """Vitality/Mind/Inteligence/Strength/Luck/Charisma(Cut)/Awareness/Agility/Endurance(Cut)/Dexterity(Cut)"""
         self._hp = hp + 20*self.statBlock[0] if applyMods else hp
         self.max_hp = max(self._hp,max_hp)
         self.mp = mp + 20*self.statBlock[1] if applyMods else mp
@@ -163,6 +163,8 @@ class Player:
         if(self.items[index].uses == 0):
             del self.items[index]
 
+        return "CONTINUE"
+
     def take_damage(self, amount, ignore):
         self.hp -= amount * (1 - (self.dmgRed() * (1 - ignore)))
         if self.hp < 0:
@@ -193,7 +195,7 @@ class Player:
             return self.weapon["secondary"]
         else:
             return None
-
+    
 class Enemy:
     def __init__(self, name: str, hp: float, dmg: int = 5, dmg_red: int = 0, reward: int = 10, skills: dict | None = None, stat_effs: list | None = None, tameable: bool = False):
         self._hp = hp

@@ -51,8 +51,7 @@ class Weapon:
     def useSkill(self, index, target):
         self.skills[index](self,target)
         
-    def attack(self, target, ignore: int = 0, cost = 8):
-        self.owner.sta -= cost
+    def attack(self, target, ignore: int = 0):
         dmg = self.calc_damage(self.base_dmg)
         ctx = {
             "attacker": self.owner,

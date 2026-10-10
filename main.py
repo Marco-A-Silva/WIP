@@ -194,57 +194,57 @@ while running:
     match appState:
 
         case "eventTransition":
-            overlay = pygame.Surface(screen.get_size())
-            overlay.fill((0,0,0))
-            overlay.set_alpha(transition_alpha)
-            screen.blit(overlay, (0,0))
-            transition_alpha += transition_speed
+            #overlay = pygame.Surface(screen.get_size())
+            #overlay.fill((0,0,0))
+            #overlay.set_alpha(transition_alpha)
+            #screen.blit(overlay, (0,0))
+            #transition_alpha += transition_speed
             drawNotifications(display)
 
-            if transition_alpha >= 800:
-                appState = "game"
-                transition_alpha = 0
-                visual_level = room
+            #if transition_alpha >= 800:
+            appState = "game"
+             #   transition_alpha = 0
+            visual_level = room
 
         case "roomTransition":
-            overlay = pygame.Surface(screen.get_size())
-            overlay.fill((0,0,0))
-            overlay.set_alpha(transition_alpha)
-            screen.blit(overlay, (0,0))
-            transition_alpha += transition_speed
+            #overlay = pygame.Surface(screen.get_size())
+            #overlay.fill((0,0,0))
+            #overlay.set_alpha(transition_alpha)
+            #screen.blit(overlay, (0,0))
+            #transition_alpha += transition_speed
 
-            if transition_alpha >= 255:
+            #if transition_alpha >= 255:
                 appState = "game"
-                transition_alpha = 0
+             #   transition_alpha = 0
                 visual_level = room
 
         case "transition":
-            overlay = pygame.Surface(screen.get_size())
-            overlay.fill((0,0,0))
-            overlay.set_alpha(transition_alpha)
-            screen.blit(overlay, (0,0))
-            transition_alpha += transition_speed
+            #overlay = pygame.Surface(screen.get_size())
+            #overlay.fill((0,0,0))
+            #overlay.set_alpha(transition_alpha)
+            #screen.blit(overlay, (0,0))
+            #transition_alpha += transition_speed
 
-            if transition_alpha >= 255:
+            #if transition_alpha >= 255:
                 partida_party, enemyList, room = load_game_state(save_path)
                 advParty[:] = partida_party
                 player = advParty[0]
                 appState = "game"
-                transition_alpha = 0
+                #transition_alpha = 0
 
         case "hubTransition":
-            overlay = pygame.Surface(screen.get_size())
-            overlay.fill((0,0,0))
-            overlay.set_alpha(transition_alpha)
-            screen.blit(overlay, (0,0))
-            transition_alpha += transition_speed
+            #overlay = pygame.Surface(screen.get_size())
+            #overlay.fill((0,0,0))
+            #overlay.set_alpha(transition_alpha)
+            #screen.blit(overlay, (0,0))
+            #transition_alpha += transition_speed
 
-            if transition_alpha >= 255:
+            #if transition_alpha >= 255:
                 partida_party, enemyList, room = load_game_state(save_path)
                 advParty[:] = partida_party
                 player = advParty[0]
                 appState = "hub"
-                transition_alpha = 0
+                #transition_alpha = 0
 
         case "classSelect":
             screen.fill((10,10,15))
