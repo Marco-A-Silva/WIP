@@ -1,7 +1,6 @@
 import pygame, random, copy, os
-from .ui import HBox, VBox, UIPanel, SItemSlot
-from .view import gameRenderer, combatRenderer, shopRenderer
-from .manager import gameManager, combatManager, shopManager
+from .view import gameRenderer, combatRenderer, shopRenderer, chestRenderer
+from .manager import gameManager, combatManager, shopManager, chestManager
 from .visuals import floatingText, animation
 from funcionalidades.Utility.information import addNotification
 from funcionalidades.Utility.saving_loading import load_game_state
@@ -173,7 +172,7 @@ class gameState(State):
             case "fight" | "elite":
                 self.sub_state = combatState(self.display, self.adv_party, self.enemies, True, self.manager.room, self.manager.floor, self.manager.active_floor, addNotification) 
             case "chest":
-                self.sub_state = chestState(self.display)
+                self.sub_state = chestState(self.display, self.adv_party)
             case "shop":
                 self.sub_state = shopState(self.display, self.adv_party)
             case "event":
@@ -434,22 +433,6 @@ class shopState(State):
         self.manager = shopManager(adv_party, self.gen_floating_text)
         self.renderer = shopRenderer(self.display)
 
-        self.ui_root = UIPanel(0, 0, display[0].get_width(), display[0].get_height())
-
-    #---------------------------------------------------------------------------------------------------------------------------
-    #Item List
-        self.item_list = HBox(10, 600, display[0].get_width(), spacing=15, wrap=True, align="center")
-        self.ui_root.add_child(self.item_list)
-
-        for item in self.manager.shop_items:
-            slot = SItemSlot(display[1][0].render(str(item[0].name), True, (255, 255, 255)).width + 20, 40, item[0].name, None)
-            slot.data = lambda s=slot, i=item: self.buy_item(s, i) 
-            self.item_list.add_child(slot)
-
-        self.item_list.recalculate_layout()
-    #---------------------------------------------------------------------------------------------------------------------------
-    #Player List
-
     def handle_event(self, event):
 
         if event.type == pygame.KEYDOWN:
@@ -459,7 +442,7 @@ class shopState(State):
                 limite = len(self.manager.party) if self.sub_state == "SELECT_SHOPPER" else len(self.manager.shop_items)
                 self.selected_index = min(limite - 1, self.selected_index + 1)
             
-            elif event.key == pygame.K_BACKSPACE:
+            elif event.key == pygame.K_b:
                 if self.sub_state == "BROWSING":
                     self.sub_state = "SELECT_SHOPPER"
                     self.selected_index = 0
@@ -467,7 +450,7 @@ class shopState(State):
             elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
 
                 if self.sub_state == "BROWSING":
-                    self.item_list.children[self.selected_index].execute()
+                    self.manager.process_purchase(self.manager.shop_items[self.selected_index])
                 elif self.sub_state == "SELECT_SHOPPER":
                     self.manager.set_active_shopper(self.selected_index)
                     self.sub_state = "BROWSING"
@@ -475,55 +458,100 @@ class shopState(State):
             elif event.key == pygame.K_p:
                 self.is_done = True
 
-    def buy_item(self, slot, item):
-        cost = self.manager.process_purchase(item)
-        if cost:
-            self.gen_floating_text(slot, cost)
-        else: 
-            self.gen_floating_text(slot, "not enough money")
-
 
     def render(self):
         self.renderer.render(
             self.sub_state, 
             self.manager.party, 
             self.selected_index,
-            self.ui_root, 
+            self.manager.shop_items, 
             self.active_effs
         )
 
 
-    def gen_floating_text(self, slot, gold):
-        texto_str = str(gold)
+    def gen_floating_text(self, shopper, cantidad):
+        indice = self.manager.party.index(shopper)
+        x = 110 + indice * 240
+        y = self.display[0].get_height() - 150
 
-        fuente = self.display[1][0] 
-        ancho_texto = fuente.size(texto_str)[0]
-
-        x_ajustada = slot.global_rect.centerx - (ancho_texto // 2)
-        y_ajustada = slot.global_rect.top - 20
-
-        self._floating_text(x_ajustada, y_ajustada, texto_str, self.display[1][0], color=(255, 215, 0))
+        if isinstance(cantidad, str):
+            self._floating_text(x, y, cantidad, self.display[1][0])  # rojo por defecto
+        else:
+            self._floating_text(x, y, f"-{cantidad}g", self.display[1][0], color=(255, 215, 0))
 
     def update(self):
-        if self.sub_state == "BROWSING":
-            self.ui_root.update()
-        else:
-            for slot in self.item_list.children:
-                slot.is_selected = False
-
         for efecto in self.active_effs:
             efecto.update()
 
         self.active_effs = [e for e in self.active_effs if e.alpha > 0]
 
 
-class eventState(State):
-    def __init__(self, display):
+class chestState(State):
+    def __init__(self, display, party):
         super().__init__(display)
         self.selected_index = 0
+        self.sub_state = "SELECT"
+        
+        self.manager = chestManager(party, self.gen_floating_text)
+        self.renderer = chestRenderer(self.display)
+
+    def handle_event(self, event):
+        if not self.manager.items:
+            return
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self.selected_index = max(0, self.selected_index - 1)
+            elif event.key == pygame.K_DOWN:
+                limite = len(self.manager.party) if self.sub_state == "SELECT" else len(self.manager.items)
+                self.selected_index = min(limite - 1, self.selected_index + 1)
+            
+            elif event.key == pygame.K_b:
+                if self.sub_state == "TAKE":
+                    self.sub_state = "SELECT"
+                    self.selected_index = 0
+
+            elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
+
+                if self.sub_state == "TAKE":
+                    self.manager.open_chest(self.manager.active_shopper, self.manager.items[self.selected_index])
+                    self.selected_index = max(0, min(self.selected_index, len(self.manager.items) - 1))
+                elif self.sub_state == "SELECT":
+                    self.manager.set_active_player(self.selected_index)
+                    self.sub_state = "TAKE"
+                    self.selected_index = 0
+            elif event.key == pygame.K_p:
+                self.is_done = True
+
+    def render(self):
+        self.renderer.render(
+            self.sub_state,
+            self.manager.party,
+            self.manager.items,
+            self.selected_index,
+            self.active_effs
+        )
+
+    def update(self):
+        for efecto in self.active_effs:
+            efecto.update()
+
+        self.active_effs = [e for e in self.active_effs if e.alpha > 0]
+
+        if not self.manager.items and not self.active_effs:
+            self.is_done = True
 
 
-class chestState(State):
+    def gen_floating_text(self, member, texto):
+        indice = self.manager.party.index(member)
+        x = 110 + indice * 240
+        y = self.display[0].get_height() - 150
+
+        self._floating_text(x, y, f"+ {texto}", self.display[1][0], color=(120, 255, 120))
+
+
+
+class eventState(State):
     def __init__(self, display):
         super().__init__(display)
         self.selected_index = 0

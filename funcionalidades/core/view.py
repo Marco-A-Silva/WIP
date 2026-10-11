@@ -376,7 +376,6 @@ class combatRenderer:
             self.display[0].blit(ayuda_surface, (10, hud_y + 50))
 
         
-
 class shopRenderer:
     def __init__(self, display):
         self.display = display
@@ -385,33 +384,116 @@ class shopRenderer:
         fonts = [pygame.font.SysFont("Arial", 30),pygame.font.SysFont("Arial", 20),pygame.font.SysFont("Arial", 15)]
         display = [screen, fonts, colore]"""
 
-    def render(self, sub_state, party, selected_index, ui, effs):
-        pygame.draw.rect(self.display[0], (50, 50, 50), ui.global_rect)
+    def render(self, sub_state, party, selected_index, shop_items, effs):
 
-        self._render_selection(self.display[0], party, selected_index, sub_state)
-    
-        ui.draw(self.display)
+        self._shopper_selection(self.display[0], party, selected_index, sub_state)
+        self._render_items(self.display[0], shop_items, sub_state, selected_index)
+
         for effect in effs:
             effect.draw(self.display[0])
 
-    def _render_selection(self, surface, party, selected_index, sub_state): 
-        party_hud_length = 0
+    def _render_items(self, surface, shop_items, sub_state, selected_index):
+        fuente = self.display[1][0]
+        ancho = surface.get_width()
+        x_nombre = ancho // 4
+        x_precio = ancho - ancho // 4
+        y = 60
+
+        for i, entry in enumerate(shop_items):
+            objeto, precio = entry[0], entry[1]
+            seleccionado = sub_state == "BROWSING" and i == selected_index
+
+            nombre = fuente.render(objeto.name, True, (255, 255, 0) if seleccionado else (255, 255, 255))
+            costo = fuente.render(f"{precio}g", True, (255, 215, 0))
+
+            surface.blit(nombre, (x_nombre, y))
+            surface.blit(costo, (x_precio - costo.get_width(), y))
+            y += nombre.get_height() + 8
+            
+
+    def _shopper_selection(self, surface, party, selected_index, sub_state): 
+        max_height = self.display[0].get_height()
+        a = 0
+
         for i, char in enumerate(party):
-            width_px, height_px = self.display[1][0].size(char.name + "  ")
-            last_pmember = max(165, width_px + 20)
-            pygame.draw.rect(self.display[0], (50,50,50), (0, party_hud_length, last_pmember, height_px + 20), border_radius=10)
-            pygame.draw.rect(self.display[0], (200,200,255), (0, party_hud_length, last_pmember, height_px + 20), 2, border_radius=10)
+            width_name, height_name = self.display[1][0].size(char.name + "  ")
+            hud_y = max_height - (height_name + 50)
+            last_pmember = max(240, width_name + 20)
 
-            texto = self.display[1][0].render(char.name + " ", True, (255, 255, 255))
-            self.display[0].blit(texto, (20+party_hud_length, height_px/2 - 5))
-
-            texto = self.display[1][1].render(str(char.gd) + "g", True, (255, 255, 0, 120))
-            self.display[0].blit(texto, (party_hud_length + texto.width + width_px, 18))
-
+            self.draw_member(i, char, a, hud_y, last_pmember, height_name + 50, width_name)
             if i == selected_index and sub_state == "SELECT_SHOPPER":
-                glow = pygame.Surface((last_pmember, 130), pygame.SRCALPHA)
-                pygame.draw.rect(glow, (255, 255, 0, 120), (0, party_hud_length, last_pmember, height_px + 20), width=4, border_radius=10)
-                pygame.draw.rect(glow, (255, 255, 0, 80), (2, party_hud_length, last_pmember, height_px + 20), width=2, border_radius=8)
-                self.display[0].blit(glow, (party_hud_length, 0))
+                pygame.draw.rect(self.display[0], (255, 255, 0, 80), (a, hud_y, last_pmember, height_name + 50), width=2, border_radius=8)
+                
 
-            party_hud_length += last_pmember
+            a += last_pmember
+
+    def draw_member(self, number, char, x, y , width, height, name_width):
+        #Portrait
+        surface = self.display[0]
+        pygame.draw.rect(self.display[0], (50,50,50), (x, y, width, height), border_radius=10)
+
+        #Status Bars
+        draw_bar(surface, x+9 ,y + 50,width - 18 , 8, char._hp, char.max_hp, hp_bar_state, f"HP_{number}", (50, 200, 50))
+        draw_bar(surface, x+9 ,y + 60 ,width - 18 , 8, char.mp, char.max_mp, hp_bar_state, f"MP_{number}", (50, 50, 200))
+        draw_bar(surface, x+5 , y+79, width-9, 2, char.xp, char.xp2level, hp_bar_state, f"XP_{number}", (178, 213, 255))
+
+        pygame.draw.rect(self.display[0], (200,200,255), (x, y, width, height), 2, border_radius=10)
+
+        texto = self.display[1][0].render(char.name + " ", True, (255, 255, 255))
+        self.display[0].blit(texto, (x+10, y + (height-50)/3))
+
+        texto = self.display[1][1].render("Lv "+(str(char.level))+" ", True, (0, 150, 255))
+        self.display[0].blit(texto, (x+name_width, y + (height-50)/1.7))
+
+        texto = self.display[1][1].render(str(char.gd) + "g", True, (255, 255, 0))
+        self.display[0].blit(texto, (width - texto.width - 10, y + (height-50)/1.8))
+
+
+class chestRenderer(shopRenderer):
+    def __init__(self, display):
+        super().__init__(display)
+        fondo = pygame.image.load("assets/backgrounds/chest_1.png").convert_alpha()
+        self.background = pygame.transform.scale(fondo, display[0].get_size())
+
+    def render(self, sub_state, party, chest_items, selected_index, effs):
+        self.display[0].blit(self.background, (0, 0))
+        self._render_items(self.display[0], chest_items, sub_state, selected_index)
+        self._player_selection(self.display[0], party, selected_index, sub_state)
+
+        for effect in effs:
+            effect.draw(self.display[0])
+
+    def _player_selection(self, surface, party, selected_index, sub_state): 
+        max_height = self.display[0].get_height()
+        a = 0
+
+        for i, char in enumerate(party):
+            width_name, height_name = self.display[1][0].size(char.name + "  ")
+            hud_y = max_height - (height_name + 50)
+            last_pmember = max(240, width_name + 20)
+
+            self.draw_member(i, char, a, hud_y, last_pmember, height_name + 50, width_name)
+            if i == selected_index and sub_state == "SELECT":
+                pygame.draw.rect(self.display[0], (255, 255, 0, 80), (a, hud_y, last_pmember, height_name + 50), width=2, border_radius=8)
+                
+
+            a += last_pmember
+
+    def _render_items(self, surface, chest_items, sub_state, selected_index):
+        center_x = surface.get_width() // 2
+        center_y = surface.get_height() // 2
+
+        panel_rect = pygame.Rect(0, 0, 420, 100 + len(chest_items) * 50)
+        panel_rect.center = (center_x, center_y - 100)
+
+        pygame.draw.rect(surface, (30, 30, 30), panel_rect, border_radius=8)
+        pygame.draw.rect(surface, (200, 200, 200), panel_rect, width=2, border_radius=8)
+
+        titulo = self.display[1][0].render("You opened a chest, it had:", True, (200, 255, 255))
+        surface.blit(titulo, titulo.get_rect(center=(center_x, panel_rect.top + 36)))
+
+        for i, opt in enumerate(chest_items):
+            seleccionado = sub_state == "TAKE" and i == selected_index
+            color = (255, 255, 100) if seleccionado else (255, 255, 255)
+            opt_surf = self.display[1][0].render(opt.name, True, color)
+            surface.blit(opt_surf, opt_surf.get_rect(center=(center_x, panel_rect.top + 90 + i * 50)))

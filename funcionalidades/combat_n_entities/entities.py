@@ -1,10 +1,14 @@
 from funcionalidades.combat_n_entities.combat_items import  Weapon, Armor
 from .protocols import Equipable
 from funcionalidades.Utility.combat_utils import Hooks
+from enum import IntEnum
 import random
 
 FISTS = Weapon("Fists", 50)
 TUNIC = Armor("Tunic", 0.01, "chest")
+
+class Stats(IntEnum):
+    CON, MND, INT, STR, AGI, LCK = range(6)
 
 class StatBlock(list):
 
@@ -20,17 +24,17 @@ class StatBlock(list):
 
     def onChange(self, index, diff):
         match index:
-            case 0:  # Vitality → Max HP
+            case Stats.CON:  # Vitality → Max HP
                 inc = 10 * diff
                 self.player.max_hp += inc
                 self.player._hp += inc
 
-            case 1:  # Mind → Max MP
+            case Stats.MND:  # Mind → Max MP
                 inc = 8 * diff
                 self.player.max_mp += inc
                 self.player.mp += inc
             
-            case 2:
+            case Stats.INT:
                 for key,weapon in self.player.weapon.items():
                     if weapon is not None and "int" in weapon.scaling.keys():
                         if "magic" in weapon.type:
@@ -38,33 +42,24 @@ class StatBlock(list):
                         else:
                             weapon.dmg = weapon.calc_damage(weapon.base_dmg)
 
-            case 3:
+            case Stat.STR:
                 for key,weapon in self.player.weapon.items():
                     if weapon is not None and "str" in weapon.scaling.keys():
                         if "magic" in weapon.type:
-                            weapon.mgc = weapon.calc_damage(weapon.base_dmg)
+                            weapon.mgc = weapon.calc_damage(weapon.base_mgc)
                         else:
                             weapon.dmg = weapon.calc_damage(weapon.base_dmg)
 
-
-
-            case 8:  # Endurance → Max STA
-                inc = 8 * diff
-                self.player.max_sta += inc
-                self.player.sta += inc
-
 class Entity():
 
-    def __init__(self, applyMods, hp: float, mp:int = 100, sta:int = 60, max_sta:int = 60, max_hp:int = 0, max_mp:int = 0, weapons: {} | None = None, armor: {} | None = None, stat_effs: list | None = None, statBlock: list = [], name = "Entity"):
+    def __init__(self, applyMods, hp: float, mp:int = 100, max_hp:int = 0, max_mp:int = 0, weapons: {} | None = None, armor: {} | None = None, stat_effs: list | None = None, statBlock: list = [], name = "Entity"):
         self.name = name
-        self.statBlock = StatBlock(self,statBlock) if statBlock else StatBlock(self,[random.randint(0,11) for i in range(10)])
-        """Vitality/Mind/Inteligence/Strength/Luck/Charisma(Cut)/Awareness/Agility/Endurance(Cut)/Dexterity(Cut)"""
-        self._hp = hp + 20*self.statBlock[0] if applyMods else hp
+        self.statBlock = StatBlock(self,statBlock) if statBlock else StatBlock(self,[random.randint(0,11) for i in range(6)])
+        """Constitution/Mind/Inteligence/Strength/Agility/Luck"""
+        self._hp = hp + 20*self.statBlock[Stats.CON] if applyMods else hp
         self.max_hp = max(self._hp,max_hp)
-        self.mp = mp + 20*self.statBlock[1] if applyMods else mp
+        self.mp = mp + 20*self.statBlock[Stats.MND] if applyMods else mp
         self.max_mp = max(self.mp,max_mp)
-        self.sta = sta
-        self.max_sta = max(max_sta,sta)
         self.gd = gd
         self.stat_effs = stat_effs or []
         self.tags = []
@@ -92,9 +87,9 @@ class Player:
         self.xp = xp
         self.statBlock = StatBlock(self,statBlock) if statBlock else StatBlock(self,[random.randint(0,11) for i in range(10)])
         """Vitality/Mind/Inteligence/Strength/Luck/Charisma/Awareness/Agility/Endurance/Dexterity"""
-        self._hp = hp + 20*self.statBlock[0] if applyMods else hp
+        self._hp = hp + 20*self.statBlock[Stats.CON] if applyMods else hp
         self.max_hp = max(self._hp,max_hp)
-        self.mp = mp + 20*self.statBlock[1] if applyMods else mp
+        self.mp = mp + 20*self.statBlock[Stats.MND] if applyMods else mp
         self.max_mp = max(self.mp,max_mp)
         self.sta = sta
         self.max_sta = max(max_sta,sta)

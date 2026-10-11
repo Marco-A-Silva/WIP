@@ -1,5 +1,4 @@
 import pygame, random, copy
-from vault.events import badEvents,neutralEvents,goodEvents
 
 def gameStateChange(inputs, gameState, targets, action):
     return targets, gameState, action, inputs, True

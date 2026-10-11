@@ -167,10 +167,8 @@ def load_game_state(save_path):
             load,
             p["player_hp"],
             p["player_mp"],
-            p["player_sta"],
             max_hp=p["player_max_hp"],
             max_mp=p["player_max_mp"],
-            max_sta=p["player_max_sta"],
             weapons=weapons,
             armor=armor,
             statBlock=p["player_statBlock"]

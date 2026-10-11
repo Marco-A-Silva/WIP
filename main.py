@@ -12,7 +12,7 @@ from funcionalidades import drawPauseMenu, drawShopMenu, drawScreen, drawChestMe
 from funcionalidades import menuControl, gameStateChange, shopControl, eventControl, extraControl, treasureControl
 
 #Import blueprints
-from vault import blacksmith, bl_length, shopItems, enemies, bosses, enemySkills, magicSkills, meleeSkills, itemPools, staticEvents, shopSmith
+from vault import blacksmith, bl_length, shopItems, enemies, bosses, enemySkills, magicSkills, meleeSkills, itemPools, shopSmith
 
 #Import generator functions
 from vault import generateItemPool
@@ -352,19 +352,6 @@ while running:
                         instance.load_new_room()
                         staticEvent = None
 
-                case "chest":
-                    
-                    if not chestPool and eventList["chest"]: 
-                        chestPool = generateItemPool(itemPools)
-
-                    selected_id, eventList["chest"], running = treasureControl(events, selected_id, player, eventList["chest"], chestPool, running)
-
-                    if eventList["chest"]:
-                        drawChestMenu(display, itemPools, chestPool, selected_id)
-                    else: 
-                        instance.load_new_room()
-                        chestPool = None
-
                 case _:
 
                     for e in events:
@@ -377,9 +364,8 @@ while running:
                     drawNotifications(display)
 
                     if instance.sub_state is not None and instance.sub_state.is_done:
-                        if instance.adv_party:
+                        if any(char.hp > 0 for char in instance.adv_party):
                             instance.manager.load_new_room()
-                            enemyList = []
                         else: running = False 
 
                     """if not enemyList and pending_levels == 0:

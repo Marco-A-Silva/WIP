@@ -1,12 +1,12 @@
 import random, copy
 from vault.enemies import enemies, bosses
-from vault.items import shopItems
+from vault.items import shopItems, itemPools
 from vault.gear import blacksmith
 from funcionalidades.core.AI import EnemyAi, Attack, UseSkill
 from funcionalidades.combat_n_entities.entities import Enemy
 
 MAIN_ROOMS = ["fight","chest","shop","event","extra"]
-MAIN_ODDS = [1,0,0,0,0] # [55,12,6,22,5]
+MAIN_ODDS = [55,12,6,22,5]
 EXTRA_ROOMS = ["dojo","rest site","school of magic"]
 EXTRA_ODDS = [1,3,1]
 
@@ -261,9 +261,49 @@ class shopManager:
         if not self.active_shopper:
             return None
 
-        if self.active_shopper.gd >= item[1]:
+        if self.active_shopper.gd >= item[1]: 
             self.active_shopper.gold_remove(item[1])
             self.active_shopper.equip_armament(copy.deepcopy(item[0]), False)
+            self.shop_items.remove(item)
+            if self.visual_trigger:
+                self.visual_trigger(self.active_shopper, item[1])
             return -item[1]
-        else:
-            return None
+
+        if self.visual_trigger:
+            self.visual_trigger(self.active_shopper, "not enough gold")
+        return None
+
+class chestManager:
+
+    def __init__(self, party, visualCallback = None):
+        self.party = party
+        self.items = self._generateItemPool(itemPools)
+        self.visual_trigger = visualCallback
+        self.active_shopper = None
+
+    def _generateItemPool(self, possibleItems):
+
+        itemPool = []
+
+        amount = random.choices([1,2,3,4],k=1,weights=[40,40,15,5])[0]
+        for i in range(amount):
+            rarity = random.choices([0,1,2,3],k=1,weights=[500, 25, 10, 5])[0]
+
+            itemPool.append(random.choice(possibleItems[rarity]))
+
+            if random.randint(1,20) == 20:
+                itemPool.append(random.choice(possibleItems[rarity]))
+
+        return itemPool
+
+    def set_active_player(self, index):
+        if 0 <= index < len(self.party):
+            self.active_shopper = self.party[index]
+            return True
+        return False
+
+    def open_chest(self, member, item):
+        self.items.remove(item)
+        member.equip_armament(copy.deepcopy(item), False)
+        if self.visual_trigger:
+            self.visual_trigger(member, item.name)
