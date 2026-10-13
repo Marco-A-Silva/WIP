@@ -13,14 +13,14 @@ enemySkills = {
     "Regen": EnemySkill(
         "Regen",
         "heal",
-        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"hp": (target.hp*0.4, 0), "dmg_red": (0.05,1)},tags=["def_up"])),
+        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"hp": (("+", target.hp*0.15), 0), "dmg_red": (("+",0.05),1)},tags=["def_up"])),
         tags=["def_up"]
     ),
 
     "Harden": EnemySkill(
         "Harden",
         "buff",
-        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"dmg_red": (0.3,1), "dmg": (-5,-1)},tags=["def_up","dmg_up"])),
+        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"dmg_red": (("=",0.3),1), "dmg": (("+",5),-1)},tags=["def_up","dmg_up"])),
         tags=["def_up","dmg_up"]
     ),
 
@@ -33,14 +33,14 @@ enemySkills = {
     "Humiliation": EnemySkill( 
         "Humiliation",
         "buff",
-        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"dmg_red": (0.02, 1)},tags=["def_up"])),
+        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"dmg_red": (("+", 0.02), 1)},tags=["def_up"])),
         tags=["def_up"]
     ),
 
     "Shroud": EnemySkill(
         "Shroud",
         "buff",
-        lambda self, target: target.addStatusEffect(OverTimeEffects(target,1,effects={"dmg_red": (1,True),"hp": (20,0)},tags=["def_max"])),
+        lambda self, target: target.addStatusEffect(OverTimeEffects(target,1,effects={"dmg_red": (("=", 1),True),"hp": (("+", 20),0)},tags=["def_max"])),
         tags=["def_max"]
     ),
 
@@ -53,7 +53,7 @@ enemySkills = {
     "Berserk": EnemySkill(
         "Berserk",
         "buff",
-        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"dmg_red": (0.2, 1), "dmg": (target.dmg*0.3, 1)},tags=["def_up","dmg_up"])),
+        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"dmg_red": (("=", 0.2), 1), "dmg": (("+", target.dmg*0.3), 1)},tags=["def_up","dmg_up"])),
         tags=["def_up","dmg_up"]
     ),
 
@@ -61,9 +61,9 @@ enemySkills = {
         "Taunt",
         "debuff",
         lambda self, target: (
-            target.addStatusEffect(OverTimeEffects(target.armor["chest"],3,effects={"dmg_red": (-0.25, 1)},tags=["def_dn"])),
+            target.addStatusEffect(OverTimeEffects(target.armor["chest"],3,effects={"dmg_red": (("-", 0.15), 1)},tags=["def_dn"])),
             target.addStatusEffect(OverTimeEffects(target.desiredWeapon("dmg") if target.desiredWeapon("dmg") != None else target.desiredWeapon("mgc"),2,effects={"dmg" if target.desiredWeapon("dmg") != None else "mgc":
-                    (-target.desiredWeapon("dmg").dmg*0.25 if target.desiredWeapon("dmg") != None else -target.desiredWeapon("mgc").mgc*0.25, 1)},tags=["dmg_dn" if target.desiredWeapon("dmg") != None else "mgc_dn"]))
+                    (("-", target.desiredWeapon("dmg").dmg*0.25) if target.desiredWeapon("dmg") != None else ("-", target.desiredWeapon("mgc").mgc*0.25), 1)},tags=["dmg_dn" if target.desiredWeapon("dmg") != None else "mgc_dn"]))
         ),
         tags=["def_dn","mgc_dn","dmg_dn"]
     ),
@@ -72,8 +72,8 @@ enemySkills = {
         "Overclocked Strike",
         "special",
         lambda self, target: (
-            self.addStatusEffect(OverTimeEffects(self,3,effects={"dmg_red": (-0.05,1)},tags=["def_dn"])),
-            modifyAttrs(target, {"hp": lambda x: x-target.max_hp*0.05})
+            self.addStatusEffect(OverTimeEffects(self,3,effects={"dmg_red": (("-",0.05),1)},tags=["def_dn"])),
+            modifyAttrs(target, {"hp": ("-", target.max_hp*0.05)})
         ),
         tags=["def_dn"]
     ),
@@ -81,21 +81,21 @@ enemySkills = {
     "Toxic Spores": EnemySkill(
         "Toxic Spores",
         "debuff",
-        lambda self, target: target.addStatusEffect(OverTimeEffects(target,3,effects={"hp": (-5, 2)},tags=["dot"])),
+        lambda self, target: target.addStatusEffect(OverTimeEffects(target,3,effects={"hp": (("-", 5), 2)},tags=["dot"])),
         tags=["dot"]
     ),
 
     "Cinder Swipe": EnemySkill(
         "Cinder Swipe",
         "debuff",
-        lambda self, target: target.addStatusEffect(OverTimeEffects(target,3,effects={"hp": (-5, 2)},tags=["dot"])),
+        lambda self, target: target.addStatusEffect(OverTimeEffects(target,3,effects={"hp": (("-", 5), 2)},tags=["dot"])),
         tags=["dot"]
     ),
 
     "Smoke Screen": EnemySkill(
         "Smoke Screen",
         "buff",
-        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"dmg_red": (0.4, 1)},tags=["def_up"])),
+        lambda self, target: target.addStatusEffect(OverTimeEffects(target,2,effects={"dmg_red": (("=", 0.4), 1)},tags=["def_up"])),
         tags=["def_up"]
     ),
 
@@ -103,8 +103,8 @@ enemySkills = {
         "Leech Life",
         "special",
         lambda self, target: (
-            modifyAttrs(self, {"hp": lambda x: x+10}),
-            modifyAttrs(target, {"hp": lambda x: x-10})
+            modifyAttrs(self, {"hp": ("+", 10)}),
+            modifyAttrs(target, {"hp": lambda x: ("-", 10)})
         )
     ),
 
@@ -112,8 +112,8 @@ enemySkills = {
         "Reverse Cursed Technique",
         "special",
         lambda self, target: (
-            modifyAttrs(target,{"hp": lambda x: x-target.weapon.dmg*0.05}),
-            self.addStatusEffect(OverTimeEffects(self,2,effects={"hp": (0.4,5)},tags=["imm"]),1)
+            modifyAttrs(target,{"hp": ("-", target.weapon.dmg*0.05)}),
+            self.addStatusEffect(OverTimeEffects(self,2,effects={"hp": (("+", 0.4),5)},tags=["imm"]),1)
         ),
         tags=["imm"]
     ),
@@ -121,7 +121,7 @@ enemySkills = {
     "Ashen Return": EnemySkill(
         "Ashen Return",
         "heal",
-        lambda self, target: target.addStatusEffect(OverTimeEffects(target,3,effects={"hp": (target.base_hp*0.5,3)},tags=["revive"],treshold=0),1),
+        lambda self, target: target.addStatusEffect(OverTimeEffects(target,3,effects={"hp": (("+",target.base_hp*0.5),3)},tags=["revive"],treshold=0),1),
         tags=["revive"]
     )
 }

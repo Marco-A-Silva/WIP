@@ -2,6 +2,7 @@ import random, copy
 from vault.enemies import enemies, bosses
 from vault.items import shopItems, itemPools
 from vault.gear import blacksmith
+from vault.events import events
 from funcionalidades.core.AI import EnemyAi, Attack, UseSkill
 from funcionalidades.combat_n_entities.entities import Enemy
 
@@ -24,6 +25,10 @@ class gameManager:
         
         self.max_rooms = len(self.floor_layout)
         self.active_floor = self.floor_layout[self.room]
+
+    @property
+    def progress(self):
+        return (self.floor - 1) + self.room / self.max_rooms
 
     def _init_floor_layout(self, floor):
         layout = random.choices(MAIN_ROOMS,k=ROOMS_PER_FLOOR,weights=MAIN_ODDS)
@@ -307,3 +312,28 @@ class chestManager:
         member.equip_armament(copy.deepcopy(item), False)
         if self.visual_trigger:
             self.visual_trigger(member, item.name)
+
+
+class eventManager:
+    def __init__(self, party, progress, room, addRoom):
+        self.party = party
+        self.event = self.gen_event()
+        self.active_player = None
+        self.progress = progress
+        self.addRoom = addRoom
+        self.nroom = room + 1
+
+    def set_active_player(self, index):
+        if 0 <= index < len(self.party):
+            self.active_player = self.party[index]
+            return True
+        return False
+
+    def run_event(self, selected_index):
+        context = {"player": self.active_player, "nroom":self.nroom, "addRoom": self.addRoom}
+        action = list(self.event.actions.keys())[selected_index]
+        self.event.resolve(action, context)
+        self.event = None
+
+    def gen_event(self):
+        return random.choice(events)

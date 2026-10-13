@@ -36,12 +36,51 @@ def draw_bar(surface, x, y, width, height, current, max_, state_dict, key, color
     if current_width > 0:
         draw_round_rect_scaled(surface, color, (x, y, current_width, height), radius)
 
-class gameRenderer:
+class Renderer:
     def __init__(self, display):
         self.display = display 
         """colore = (255, 0, 255)
         fonts = [pygame.font.SysFont("Arial", 30),pygame.font.SysFont("Arial", 20),pygame.font.SysFont("Arial", 15)]
         display = [screen, fonts, colore]"""
+
+    def render():
+        pass
+
+    def _wrap(self, text, font, max_width):
+        lines, line = [], ""
+        for word in text.split():
+            test = f"{line} {word}".strip()
+            if font.size(test)[0] <= max_width:
+                line = test
+            else:
+                if line:
+                    lines.append(line)
+                line = word
+        lines.append(line)
+        return lines
+
+    def draw_member(self, number, char, x, y , width, height, name_width):
+        #Portrait
+        surface = self.display[0]
+        pygame.draw.rect(self.display[0], (50,50,50), (x, y, width, height), border_radius=10)
+
+        #Status Bars
+        draw_bar(surface, x+9 ,y + 50,width - 18 , 8, char._hp, char.max_hp, hp_bar_state, f"HP_{number}", (50, 200, 50))
+        draw_bar(surface, x+9 ,y + 60 ,width - 18 , 8, char.mp, char.max_mp, hp_bar_state, f"MP_{number}", (50, 50, 200))
+        draw_bar(surface, x+5 , y+79, width-9, 2, char.xp, char.xp2level, hp_bar_state, f"XP_{number}", (178, 213, 255))
+
+        pygame.draw.rect(self.display[0], (200,200,255), (x, y, width, height), 2, border_radius=10)
+
+        texto = self.display[1][0].render(char.name + " ", True, (255, 255, 255))
+        self.display[0].blit(texto, (x+10, y + (height-50)/3))
+
+        texto = self.display[1][1].render("Lv "+(str(char.level))+" ", True, (0, 150, 255))
+        self.display[0].blit(texto, (x+name_width, y + (height-50)/1.7))
+
+        texto = self.display[1][1].render(str(char.gd) + "g", True, (255, 255, 0))
+        self.display[0].blit(texto, (width - texto.width - 10, y + (height-50)/1.8))
+
+class gameRenderer(Renderer):
 
     def render(self, floor_layout, room, floor):
         layout_sprites = []
@@ -117,12 +156,7 @@ class gameRenderer:
                 self.display[0].blit(dash, dash_rect)
 
 
-class combatRenderer:
-    def __init__(self, display):
-        self.display = display 
-        """colore = (255, 0, 255)
-        fonts = [pygame.font.SysFont("Arial", 30),pygame.font.SysFont("Arial", 20),pygame.font.SysFont("Arial", 15)]
-        display = [screen, fonts, colore]"""
+class combatRenderer(Renderer):
 
     def render(self, party, enemies, sub_state, selected_index, party_turn, my_turn, current_action, menu_options, active_effs):
         self.display[0].fill("black")
@@ -133,27 +167,6 @@ class combatRenderer:
 
         for effect in active_effs:
             effect.draw(self.display[0])
-
-    def draw_member(self, number, char, x, y , width, height, name_width):
-        #Portrait
-        surface = self.display[0]
-        pygame.draw.rect(self.display[0], (50,50,50), (x, y, width, height), border_radius=10)
-
-        #Status Bars
-        draw_bar(surface, x+9 ,y + 50,width - 18 , 8, char._hp, char.max_hp, hp_bar_state, f"HP_{number}", (50, 200, 50))
-        draw_bar(surface, x+9 ,y + 60 ,width - 18 , 8, char.mp, char.max_mp, hp_bar_state, f"MP_{number}", (50, 50, 200))
-        draw_bar(surface, x+5 , y+79, width-9, 2, char.xp, char.xp2level, hp_bar_state, f"XP_{number}", (178, 213, 255))
-
-        pygame.draw.rect(self.display[0], (200,200,255), (x, y, width, height), 2, border_radius=10)
-
-        texto = self.display[1][0].render(char.name + " ", True, (255, 255, 255))
-        self.display[0].blit(texto, (x+10, y + (height-50)/3))
-
-        texto = self.display[1][1].render("Lv "+(str(char.level))+" ", True, (0, 150, 255))
-        self.display[0].blit(texto, (x+name_width, y + (height-50)/1.7))
-
-        texto = self.display[1][1].render(str(char.gd) + "g", True, (255, 255, 0))
-        self.display[0].blit(texto, (width - texto.width - 10, y + (height-50)/1.8))
 
     def draw_actions(self, char, x, y , width, height, selected_index, menu_options):
   
@@ -310,33 +323,6 @@ class combatRenderer:
 
             self.display[0].blit(lbl, (x_label, y_line))
             self.display[0].blit(val, (x_value, y_line))
-
-    def draw_weapons_hud(self, char):
-        x = self.display[0].get_width() - 600
-        for idx, slot in enumerate(["primary", "secondary"]):
-            y = 300 + 40 + (idx * 50)
-            weapon = char.weapon[slot]
-            
-            if weapon is not None:
-                lbl_texto = f"{slot.capitalize()} weapon: "
-                lbl_surface = self.display[1][0].render(lbl_texto, True, self.display[2])
-                a = lbl_surface.get_width()
-                self.display[0].blit(lbl_surface, (x, y))
-
-                val_surface = self.display[1][0].render(weapon.name, True, (255, 255, 255))
-                text_rect = val_surface.get_rect(topleft=(x + a, y))
-                
-                match weapon.type:
-                    case ["melee"] | ["melee", _]:
-                        addHover(self.display, text_rect, "top", f"{int(weapon.dmg)} dmg", f"- scales with: {list(weapon.scaling.keys())}")
-                    case ["magic"] | ["magic", _]:
-                        addHover(self.display, text_rect, "top", f"{int(weapon.mgc)} mgc", f"- scales with: {list(weapon.scaling.keys())}")
-                    case ["secondary"] | ["secondary", _]:
-                        addHover(self.display, text_rect, "top", f"{int(weapon.dmg)} dmg", f"{int(weapon.dmg_red)} dmg_red", f"- scales with: {list(weapon.scaling.keys())}")
-                    case ["ranged"] | ["ranged", _]:
-                        addHover(self.display, text_rect, "top", f"{int(weapon.dmg)} dmg", f"{int(weapon.ammo)} ammo", f"- scales with: {list(weapon.scaling.keys())}")
-                
-                self.display[0].blit(val_surface, (x + a, y))
     
     def draw_enemies(self, enemies, sub_state, selected_index, current_action):
         for i, en in enumerate([e for e in enemies if e.hp > 0]):
@@ -349,40 +335,9 @@ class combatRenderer:
 
             texto_surface = self.display[1][0].render(texto, True, color_texto)
             self.display[0].blit(texto_surface, (150, 300 + i * 40))
-    
-    def draw_hud(self, selected_index, current_action, sub_state, menu_options):
-        font = self.display[1][0]
-        hud_y = self.display[0].get_height() - 300 
-        
-        if sub_state in ["SELECT_ACTION", "SELECT_ITEM", "SELECT_SKILL"]:
-            y_offset = hud_y + 10
-            for i, opcion in enumerate(menu_options):
-                es_seleccionado = (i == selected_index)
-                color_rect = (100, 100, 100) if es_seleccionado else (50, 50, 50)
-                
-                text_surface = font.render(opcion["name"], True, (255, 255, 255))
-                rect = text_surface.get_rect(topleft=(10, y_offset))
-
-                pygame.draw.rect(self.display[0], color_rect, rect.inflate(5, 5), border_radius=8)
-                self.display[0].blit(text_surface, rect)
-                y_offset += font.get_height() + 10
-
-        elif sub_state == "SELECT_TARGET":
-            accion_fijada = f"{current_action["name"]}"
-            txt_surface = font.render(accion_fijada, True, (150, 150, 150))
-            self.display[0].blit(txt_surface, (10, hud_y + 10))
-            
-            ayuda_surface = font.render("Select a target...", True, (150, 150, 150))
-            self.display[0].blit(ayuda_surface, (10, hud_y + 50))
 
         
-class shopRenderer:
-    def __init__(self, display):
-        self.display = display
-
-        """colore = (255, 0, 255)
-        fonts = [pygame.font.SysFont("Arial", 30),pygame.font.SysFont("Arial", 20),pygame.font.SysFont("Arial", 15)]
-        display = [screen, fonts, colore]"""
+class shopRenderer(Renderer):
 
     def render(self, sub_state, party, selected_index, shop_items, effs):
 
@@ -421,35 +376,13 @@ class shopRenderer:
             last_pmember = max(240, width_name + 20)
 
             self.draw_member(i, char, a, hud_y, last_pmember, height_name + 50, width_name)
-            if i == selected_index and sub_state == "SELECT_SHOPPER":
+            if i == selected_index and sub_state == "SELECT":
                 pygame.draw.rect(self.display[0], (255, 255, 0, 80), (a, hud_y, last_pmember, height_name + 50), width=2, border_radius=8)
                 
 
             a += last_pmember
 
-    def draw_member(self, number, char, x, y , width, height, name_width):
-        #Portrait
-        surface = self.display[0]
-        pygame.draw.rect(self.display[0], (50,50,50), (x, y, width, height), border_radius=10)
-
-        #Status Bars
-        draw_bar(surface, x+9 ,y + 50,width - 18 , 8, char._hp, char.max_hp, hp_bar_state, f"HP_{number}", (50, 200, 50))
-        draw_bar(surface, x+9 ,y + 60 ,width - 18 , 8, char.mp, char.max_mp, hp_bar_state, f"MP_{number}", (50, 50, 200))
-        draw_bar(surface, x+5 , y+79, width-9, 2, char.xp, char.xp2level, hp_bar_state, f"XP_{number}", (178, 213, 255))
-
-        pygame.draw.rect(self.display[0], (200,200,255), (x, y, width, height), 2, border_radius=10)
-
-        texto = self.display[1][0].render(char.name + " ", True, (255, 255, 255))
-        self.display[0].blit(texto, (x+10, y + (height-50)/3))
-
-        texto = self.display[1][1].render("Lv "+(str(char.level))+" ", True, (0, 150, 255))
-        self.display[0].blit(texto, (x+name_width, y + (height-50)/1.7))
-
-        texto = self.display[1][1].render(str(char.gd) + "g", True, (255, 255, 0))
-        self.display[0].blit(texto, (width - texto.width - 10, y + (height-50)/1.8))
-
-
-class chestRenderer(shopRenderer):
+class chestRenderer(Renderer):
     def __init__(self, display):
         super().__init__(display)
         fondo = pygame.image.load("assets/backgrounds/chest_1.png").convert_alpha()
@@ -497,3 +430,71 @@ class chestRenderer(shopRenderer):
             color = (255, 255, 100) if seleccionado else (255, 255, 255)
             opt_surf = self.display[1][0].render(opt.name, True, color)
             surface.blit(opt_surf, opt_surf.get_rect(center=(center_x, panel_rect.top + 90 + i * 50)))
+
+
+class eventRenderer(Renderer):
+
+    def render(self, sub_state, party, event, selected_index, effs):
+        self._render_event(self.display[0], event, selected_index, sub_state)
+        self._player_selection(self.display[0], party, selected_index, sub_state)
+
+        for effect in effs:
+            effect.draw(self.display[0])
+
+    def _render_event(self, surface, event, selected_index, sub_state):
+        w, h = surface.get_size()
+        body_font, opt_font = self.display[1][1], self.display[1][0]
+        hud_h = opt_font.size("A")[1] + 50
+
+        pad, gap, row_h = 30, 24, 46
+        panel_w = min(760, int(w * 0.7))
+        lines = self._wrap(event.description, body_font, panel_w - pad * 2)
+        line_h = body_font.size("A")[1] + 4
+        options = list(event.actions.keys())
+
+        panel = pygame.Rect(0, 0, panel_w, pad + len(lines) * line_h + gap + len(options) * row_h + pad)
+        panel.center = (w // 2, (h - hud_h) // 2)
+        panel.top = max(10, panel.top)
+
+        pygame.draw.rect(surface, (50, 50, 50), panel, border_radius=10)
+        pygame.draw.rect(surface, (200, 200, 255), panel, 2, border_radius=10)
+
+        y = panel.top + pad
+        for line in lines:
+            txt = body_font.render(line, True, (220, 235, 255))
+            surface.blit(txt, txt.get_rect(midtop=(panel.centerx, y)))
+            y += line_h
+
+        y += gap // 2
+        pygame.draw.line(surface, (200, 200, 255), (panel.left + pad, y), (panel.right - pad, y), 1)
+        y += gap // 2
+
+        for i, opt in enumerate(options):
+            activo = sub_state == "CHOOSE"
+            seleccionado = activo and i == selected_index
+            row = pygame.Rect(panel.left + pad, y, panel_w - pad * 2, row_h - 6)
+
+            if seleccionado:
+                pygame.draw.rect(surface, (90, 90, 40), row, border_radius=8)
+                pygame.draw.rect(surface, (255, 255, 100), row, 2, border_radius=8)
+
+            color = (255, 255, 100) if seleccionado else (255, 255, 255) if activo else (140, 140, 140)
+            txt = opt_font.render(opt, True, color)
+            surface.blit(txt, txt.get_rect(center=row.center))
+            y += row_h
+
+    def _player_selection(self, surface, party, selected_index, sub_state): 
+        max_height = self.display[0].get_height()
+        a = 0
+
+        for i, char in enumerate(party):
+            width_name, height_name = self.display[1][0].size(char.name + "  ")
+            hud_y = max_height - (height_name + 50)
+            last_pmember = max(240, width_name + 20)
+
+            self.draw_member(i, char, a, hud_y, last_pmember, height_name + 50, width_name)
+            if i == selected_index and sub_state == "SELECT":
+                pygame.draw.rect(self.display[0], (255, 255, 0, 80), (a, hud_y, last_pmember, height_name + 50), width=2, border_radius=8)
+                
+
+            a += last_pmember

@@ -1,14 +1,10 @@
 from funcionalidades.combat_n_entities.combat_items import  Weapon, Armor
 from .protocols import Equipable
-from funcionalidades.Utility.combat_utils import Hooks
-from enum import IntEnum
+from funcionalidades.Utility.combat_utils import Hooks, Stats
 import random
 
 FISTS = Weapon("Fists", 50)
 TUNIC = Armor("Tunic", 0.01, "chest")
-
-class Stats(IntEnum):
-    CON, MND, INT, STR, AGI, LCK = range(6)
 
 class StatBlock(list):
 
@@ -21,6 +17,13 @@ class StatBlock(list):
             diff = value - self[index]
             super().__setitem__(index,value)
             self.onChange(index,diff)
+
+    def __setattr__(self, name, value):
+        key = name.upper()
+        if key in Stats.__members__:
+            self[Stats[key]] = value
+        else:
+            super().__setattr__(name, value)
 
     def onChange(self, index, diff):
         match index:

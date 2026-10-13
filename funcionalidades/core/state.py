@@ -1,6 +1,6 @@
 import pygame, random, copy, os
-from .view import gameRenderer, combatRenderer, shopRenderer, chestRenderer
-from .manager import gameManager, combatManager, shopManager, chestManager
+from .view import gameRenderer, combatRenderer, shopRenderer, chestRenderer, eventRenderer
+from .manager import gameManager, combatManager, shopManager, chestManager, eventManager
 from .visuals import floatingText, animation
 from funcionalidades.Utility.information import addNotification
 from funcionalidades.Utility.saving_loading import load_game_state
@@ -176,7 +176,7 @@ class gameState(State):
             case "shop":
                 self.sub_state = shopState(self.display, self.adv_party)
             case "event":
-                self.sub_state = eventState(self.display)
+                self.sub_state = eventState(self.display, self.adv_party, self.manager.progress, self.manager.room, self.manager.add_room)
             case _ if self.manager.active_floor.startswith("extra_"):
                 self.sub_state = extraState(self.display)
 
@@ -361,7 +361,6 @@ class combatState(State):
     def get_valid_targets(self):
         team_list = getattr(self.manager, self.current_action.get("target_team", "enemies"))
         return [e for e in team_list if e.hp > 0]
-
 
     def combat_flow(self, result):
         if result != "CONTINUE":
@@ -550,11 +549,59 @@ class chestState(State):
         self._floating_text(x, y, f"+ {texto}", self.display[1][0], color=(120, 255, 120))
 
 
-
 class eventState(State):
-    def __init__(self, display):
+    def __init__(self, display, party, progress, room, addRoom):
         super().__init__(display)
         self.selected_index = 0
+        self.sub_state = "SELECT"
+
+        self.manager = eventManager(party, progress, room, addRoom)
+        self.renderer = eventRenderer(display)
+
+    def handle_event(self, event):
+        if not self.manager.event:
+            return
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self.selected_index = max(0, self.selected_index - 1)
+            elif event.key == pygame.K_DOWN:
+                limite = len(self.manager.party) if self.sub_state == "SELECT" else len(self.manager.event.actions.keys())
+                self.selected_index = min(limite - 1, self.selected_index + 1)
+            
+            elif event.key == pygame.K_b:
+                if self.sub_state == "PICK":
+                    self.sub_state = "SELECT"
+                    self.selected_index = 0
+
+            elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
+
+                if self.sub_state == "CHOOSE":
+                    self.manager.run_event(self.selected_index)
+                elif self.sub_state == "SELECT":
+                    self.manager.set_active_player(self.selected_index)
+                    self.sub_state = "CHOOSE"
+                    self.selected_index = 0
+            elif event.key == pygame.K_p:
+                self.is_done = True
+
+    def render(self):
+        self.renderer.render(
+            self.sub_state, 
+            self.manager.party, 
+            self.manager.event,
+            self.selected_index, 
+            self.active_effs,
+        )
+
+    def update(self):
+        for efecto in self.active_effs:
+            efecto.update()
+
+        self.active_effs = [e for e in self.active_effs if e.alpha > 0]
+
+        if not self.manager.event and not self.active_effs:
+            self.is_done = True
 
 
 class extraState(State):

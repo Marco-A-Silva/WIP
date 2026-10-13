@@ -331,26 +331,6 @@ while running:
                     if eventList["extra"]:
                         drawExtraMenu(extra_floor, display, player, selected_id, extraOptions)
                     else: instance.load_new_room()
-                
-                case "event":
-
-                    if not staticEvent and eventList["event"]:
-                        staticEvent = random.choice(staticEvents)
-
-                    context = {
-                        "player": player,
-                        "addRoom": lambda key: addRoom(floorLayout, key, room),
-                        "removeRoom": lambda key, i: removeRoom(floorLayout,key, i),
-                        "addNotification": lambda key, duration: addNotification(key, duration)
-                    }
-    
-                    selected_id, eventList["event"], running = eventControl(events, selected_id, player, eventList["event"], staticEvent, context, running)
-                    drawNotifications(display)
-                    if eventList["event"]:
-                        drawEventMenu(display, staticEvent, selected_id)
-                    else: 
-                        instance.load_new_room()
-                        staticEvent = None
 
                 case _:
 
